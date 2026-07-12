@@ -6,7 +6,6 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { allocationService } from "../../services/allocation.service";
-import type { Allocation } from "../../types/allocation";
 const StatCard = ({
   icon,
   title,
