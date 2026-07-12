@@ -1,4 +1,6 @@
 import { useState } from "react";
+import type { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Archive,
@@ -19,6 +21,9 @@ import {
   ChevronRight,
   BarChart3,
   Check,
+  X,
+  Trash2,
+  Eye,
 } from "lucide-react";
 
 const stats = [
@@ -90,7 +95,7 @@ const statusStyles: Record<Status, string> = {
   "in-use": "bg-[#E6F4EC] text-[#1F9D6B]",
 };
 
-const assets: {
+type AssetRow = {
   id: string;
   name: string;
   icon: React.ElementType;
@@ -99,7 +104,9 @@ const assets: {
   status: Status;
   holder: string;
   holderInitials?: string;
-}[] = [
+};
+
+const initialAssets: AssetRow[] = [
   { id: "#AF-7721", name: 'MacBook Pro 16" (M3 Max)', icon: Laptop, category: "Hardware", group: "Hardware", status: "available", holder: "Stock Room B" },
   { id: "#AF-8902", name: "Enterprise Plotter HP-Z9", icon: Printer, category: "Peripherals", group: "Hardware", status: "maintenance", holder: "Design Lab 4" },
   { id: "#AF-1143", name: 'iPad Pro 12.9" Gen 6', icon: Tablet, category: "Mobile Hardware", group: "Mobile", status: "in-use", holder: "Jane Doe", holderInitials: "JD" },
@@ -155,13 +162,145 @@ const CapacityDonut = ({ percent }: { percent: number }) => {
 
 const cardClass = "rounded-2xl border border-[#EAEEF2] bg-white";
 
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  Hardware: Laptop,
+  Peripherals: Printer,
+  "Mobile Hardware": Tablet,
+  "Studio Equip": Camera,
+  Networking: Network,
+};
+
+const groupForCategory = (c: string): Exclude<Group, "all"> =>
+  c === "Mobile Hardware"
+    ? "Mobile"
+    : c === "Hardware" || c === "Peripherals"
+      ? "Hardware"
+      : "Facility";
+
+const inputClass =
+  "w-full rounded-lg border border-[#E1E6EA] bg-[#F7F9FA] px-3 py-2 text-sm text-[#203030] focus:border-[#1F6E5A] focus:bg-white focus:outline-none";
+
+const NewAssetModal = ({
+  onClose,
+  onCreate,
+}: {
+  onClose: () => void;
+  onCreate: (row: AssetRow) => void;
+}) => {
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("Hardware");
+  const [statusVal, setStatusVal] = useState<Status>("available");
+  const [holder, setHolder] = useState("");
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onCreate({
+      id: `#AF-${Math.floor(1000 + Math.random() * 9000)}`,
+      name: name.trim(),
+      icon: CATEGORY_ICONS[category] ?? Laptop,
+      category,
+      group: groupForCategory(category),
+      status: statusVal,
+      holder: holder.trim() || "Unassigned",
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-[#1A2B4A]">New Asset</h2>
+          <button onClick={onClose} aria-label="Close" className="text-[#8A97A5] hover:text-[#475467]">
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold tracking-wide text-[#4A5560]">
+              ASSET NAME
+            </label>
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder='e.g. MacBook Pro 16"'
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold tracking-wide text-[#4A5560]">
+              CATEGORY
+            </label>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputClass}>
+              {Object.keys(CATEGORY_ICONS).map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold tracking-wide text-[#4A5560]">
+              STATUS
+            </label>
+            <select
+              value={statusVal}
+              onChange={(e) => setStatusVal(e.target.value as Status)}
+              className={inputClass}
+            >
+              <option value="available">Available</option>
+              <option value="in-use">In use</option>
+              <option value="maintenance">Maintenance</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold tracking-wide text-[#4A5560]">
+              CURRENT HOLDER
+            </label>
+            <input
+              value={holder}
+              onChange={(e) => setHolder(e.target.value)}
+              placeholder="e.g. Stock Room B"
+              className={inputClass}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-[#E1E6EA] px-4 py-2 text-sm font-semibold text-[#475467]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="rounded-lg bg-[#1F6E5A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#195C4B]"
+            >
+              Create Asset
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const Assets = () => {
+  const navigate = useNavigate();
+  const [rows, setRows] = useState<AssetRow[]>(initialAssets);
   const [group, setGroup] = useState<Group>("all");
   const [status, setStatus] = useState<Status | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("default");
   const [openMenu, setOpenMenu] = useState<"filter" | "sort" | null>(null);
+  const [rowMenu, setRowMenu] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [showNew, setShowNew] = useState(false);
 
-  const visible = assets
+  const visible = rows
     .filter((a) => group === "all" || a.group === group)
     .filter((a) => status === "all" || a.status === status)
     .sort((a, b) => {
@@ -174,6 +313,11 @@ const Assets = () => {
   const toggleMenu = (menu: "filter" | "sort") =>
     setOpenMenu((prev) => (prev === menu ? null : menu));
 
+  const deleteAsset = (id: string) => {
+    setRows((r) => r.filter((a) => a.id !== id));
+    setRowMenu(null);
+  };
+
   return (
     <div className="pb-6">
       {/* Title row */}
@@ -184,7 +328,10 @@ const Assets = () => {
             Real-time status of enterprise-wide physical resources.
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg bg-[#1F6E5A] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#195C4B]">
+        <button
+          onClick={() => setShowNew(true)}
+          className="flex items-center gap-2 rounded-lg bg-[#1F6E5A] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#195C4B]"
+        >
           <Plus size={16} /> New Asset
         </button>
       </div>
@@ -343,8 +490,45 @@ const Assets = () => {
                       {a.holder}
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-[#B4BDC6]">
-                    <MoreVertical size={16} />
+                  <td className="px-5 py-4">
+                    <div className="relative">
+                      <button
+                        onClick={() =>
+                          setRowMenu((cur) => (cur === a.id ? null : a.id))
+                        }
+                        aria-label="Row actions"
+                        className="text-[#B4BDC6] hover:text-[#475467]"
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+                      {rowMenu === a.id && (
+                        <>
+                          <button
+                            type="button"
+                            aria-label="Close menu"
+                            className="fixed inset-0 z-10 cursor-default"
+                            onClick={() => setRowMenu(null)}
+                          />
+                          <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-lg border border-[#E1E6EA] bg-white py-1 shadow-lg">
+                            <button
+                              onClick={() => {
+                                setRowMenu(null);
+                                alert(`${a.name}\n${a.id} · ${a.category} · ${a.holder}`);
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-[#475467] hover:bg-[#F5F7F9]"
+                            >
+                              <Eye size={14} /> View details
+                            </button>
+                            <button
+                              onClick={() => deleteAsset(a.id)}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-[#D64545] hover:bg-[#FDECEC]"
+                            >
+                              <Trash2 size={14} /> Delete
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -357,21 +541,38 @@ const Assets = () => {
             Showing {visible.length === 0 ? 0 : 1} to {visible.length} of {visible.length} assets
           </span>
           <div className="flex items-center gap-1.5">
-            <button className="flex h-7 w-7 items-center justify-center rounded-md border border-[#E1E6EA]">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-[#E1E6EA] disabled:opacity-40"
+            >
               <ChevronLeft size={14} />
             </button>
-            <button className="flex h-7 w-7 items-center justify-center rounded-md bg-[#1F6E5A] font-semibold text-white">
-              1
-            </button>
-            {["2", "3", "…", "297"].map((p) => (
+            {[1, 2, 3].map((p) => (
               <button
                 key={p}
-                className="flex h-7 min-w-7 items-center justify-center rounded-md px-1.5 font-semibold text-[#475467]"
+                onClick={() => setPage(p)}
+                className={`flex h-7 w-7 items-center justify-center rounded-md font-semibold ${
+                  page === p ? "bg-[#1F6E5A] text-white" : "text-[#475467] hover:bg-[#F2F5F8]"
+                }`}
               >
                 {p}
               </button>
             ))}
-            <button className="flex h-7 w-7 items-center justify-center rounded-md border border-[#E1E6EA]">
+            <span className="px-1 text-[#B4BDC6]">…</span>
+            <button
+              onClick={() => setPage(297)}
+              className={`flex h-7 min-w-7 items-center justify-center rounded-md px-1.5 font-semibold ${
+                page === 297 ? "bg-[#1F6E5A] text-white" : "text-[#475467] hover:bg-[#F2F5F8]"
+              }`}
+            >
+              297
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(297, p + 1))}
+              disabled={page === 297}
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-[#E1E6EA] disabled:opacity-40"
+            >
               <ChevronRight size={14} />
             </button>
           </div>
@@ -384,7 +585,12 @@ const Assets = () => {
         <div className={`${cardClass} p-5`}>
           <div className="mb-5 flex items-center justify-between">
             <h3 className="text-lg font-bold text-[#1A2B4A]">Maintenance Forecast</h3>
-            <button className="text-xs font-semibold text-[#1F6E5A]">View Timeline</button>
+            <button
+              onClick={() => navigate("/maintenance")}
+              className="text-xs font-semibold text-[#1F6E5A] hover:underline"
+            >
+              View Timeline
+            </button>
           </div>
           <div className="space-y-4">
             {forecast.map((f) => (
@@ -425,6 +631,16 @@ const Assets = () => {
           </div>
         </div>
       </div>
+
+      {showNew && (
+        <NewAssetModal
+          onClose={() => setShowNew(false)}
+          onCreate={(row) => {
+            setRows((r) => [row, ...r]);
+            setShowNew(false);
+          }}
+        />
+      )}
     </div>
   );
 };
