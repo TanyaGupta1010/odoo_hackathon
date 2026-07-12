@@ -1,68 +1,45 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { Plus, Wrench, Clock, CheckCircle2, AlertTriangle, User, Play, Check } from "lucide-react";
+
+const API_BASE = "http://localhost:5000/api";
+
+interface Asset {
+  id: number;
+  assetTag: string;
+  name: string;
+  status: string;
+}
+
+interface Employee {
+  id: number;
+  name: string;
+  role: string;
+}
 
 interface MaintenanceRequest {
   id: number;
-  assetTag: string;
-  assetName: string;
+  assetId: number;
   issueDescription: string;
   priority: "Low" | "Medium" | "High" | "Urgent";
   status: "Pending" | "Approved" | "Assigned" | "In_Progress" | "Resolved";
-  reporter: string;
-  technician?: string;
   photoUrl?: string;
+  reporterId?: number;
+  technicianId?: number;
+  asset: {
+    id: number;
+    assetTag: string;
+    name: string;
+  };
+  reporter?: {
+    id: number;
+    name: string;
+  };
+  technician?: {
+    id: number;
+    name: string;
+  };
 }
-
-const initialRequests: MaintenanceRequest[] = [
-  {
-    id: 1,
-    assetTag: "AF-0062",
-    assetName: "Epson Smart Projector",
-    issueDescription: "Projector bulb not turning on",
-    priority: "High",
-    status: "Pending",
-    reporter: "Priya Shah",
-  },
-  {
-    id: 2,
-    assetTag: "AF-0003",
-    assetName: "AC Unit Carrier 1.5 Ton",
-    issueDescription: "AC unit noisy compressor",
-    priority: "Medium",
-    status: "Approved",
-    reporter: "Raj Patel",
-  },
-  {
-    id: 3,
-    assetTag: "AF-0078",
-    assetName: "Toyota Electric Forklift",
-    issueDescription: "Forklift battery issues - won't hold charge",
-    priority: "Urgent",
-    status: "Assigned",
-    reporter: "Sana Iqbal",
-    technician: "Rohan Mehta",
-  },
-  {
-    id: 4,
-    assetTag: "AF-0897",
-    assetName: "HP LaserJet Enterprise Printer",
-    issueDescription: "Printer Jam - parts ordered",
-    priority: "Low",
-    status: "In_Progress",
-    reporter: "Priya Shah",
-    technician: "Rohan Mehta",
-  },
-  {
-    id: 5,
-    assetTag: "AF-0873",
-    assetName: "Executive Mesh Chair",
-    issueDescription: "Chair repair resolved",
-    priority: "Low",
-    status: "Resolved",
-    reporter: "Raj Patel",
-    technician: "Rohan Mehta",
-  },
-];
 
 const COLUMNS: { id: MaintenanceRequest["status"]; label: string; color: string }[] = [
   { id: "Pending", label: "Pending", color: "#F3F4F6" },
@@ -73,61 +50,108 @@ const COLUMNS: { id: MaintenanceRequest["status"]; label: string; color: string 
 ];
 
 const Maintenance = () => {
-  const [requests, setRequests] = useState<MaintenanceRequest[]>(initialRequests);
+  const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPriority, setSelectedPriority] = useState<string>("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<MaintenanceRequest | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   // New Request Form State
-  const [newAssetTag, setNewAssetTag] = useState("");
-  const [newAssetName, setNewAssetName] = useState("");
+  const [selectedAssetId, setSelectedAssetId] = useState<number | "">("");
   const [newDescription, setNewDescription] = useState("");
   const [newPriority, setNewPriority] = useState<"Low" | "Medium" | "High" | "Urgent">("Medium");
+  const [newPhotoUrl, setNewPhotoUrl] = useState("");
 
-  // Move request handler
-  const moveRequest = (id: number, nextStatus: MaintenanceRequest["status"]) => {
-    setRequests((prev) =>
-      prev.map((req) => {
-        if (req.id === id) {
-          // If moving to Assigned, make sure a tech is present
-          const tech = nextStatus === "Assigned" ? "Rohan Mehta" : req.technician;
-          return { ...req, status: nextStatus, technician: tech };
-        }
-        return req;
-      })
-    );
-    if (selectedRequest?.id === id) {
-      setSelectedRequest((prev) => (prev ? { ...prev, status: nextStatus } : null));
+  // Fetch all data from APIs
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const [maintenanceRes, assetsRes, employeesRes] = await Promise.all([
+        axios.get(`${API_BASE}/maintenance`),
+        axios.get(`${API_BASE}/assets`),
+        axios.get(`${API_BASE}/employees`),
+      ]);
+
+      if (maintenanceRes.data.success) {
+        setRequests(maintenanceRes.data.data);
+      }
+      if (assetsRes.data.success) {
+        // Only allow raising maintenance requests for assets
+        setAssets(assetsRes.data.data);
+      }
+      if (employeesRes.data.success) {
+        setEmployees(employeesRes.data.data);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to fetch data from backend server. Make sure the backend is running.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCreateRequest = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Update request status or technician
+  const handleUpdateReq = async (id: number, updates: Partial<MaintenanceRequest>) => {
+    try {
+      const res = await axios.patch(`${API_BASE}/maintenance/${id}`, updates);
+      if (res.data.success) {
+        // Refresh requests board
+        await fetchData();
+        // Update details modal if it's currently open
+        if (selectedRequest?.id === id) {
+          setSelectedRequest((prev) => (prev ? { ...prev, ...res.data.data } : null));
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || "Failed to update maintenance request.");
+    }
+  };
+
+  // Submit new request
+  const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAssetTag || !newDescription) return;
+    if (!selectedAssetId || !newDescription) return;
 
-    const newReq: MaintenanceRequest = {
-      id: Date.now(),
-      assetTag: newAssetTag,
-      assetName: newAssetName || "Generic Asset",
-      issueDescription: newDescription,
-      priority: newPriority,
-      status: "Pending",
-      reporter: "Current User",
-    };
+    try {
+      const res = await axios.post(`${API_BASE}/maintenance`, {
+        assetId: Number(selectedAssetId),
+        issueDescription: newDescription,
+        priority: newPriority,
+        photoUrl: newPhotoUrl || undefined,
+        reporterId: employees[0]?.id || 1, // Defaulting to first mock employee or 1
+      });
 
-    setRequests((prev) => [newReq, ...prev]);
-    setNewAssetTag("");
-    setNewAssetName("");
-    setNewDescription("");
-    setNewPriority("Medium");
-    setIsModalOpen(false);
+      if (res.data.success) {
+        await fetchData();
+        setSelectedAssetId("");
+        setNewDescription("");
+        setNewPriority("Medium");
+        setNewPhotoUrl("");
+        setIsModalOpen(false);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || "Failed to submit request.");
+    }
   };
 
   const filteredRequests = requests.filter((req) => {
+    const assetTag = req.asset?.assetTag || "";
+    const assetName = req.asset?.name || "";
     const matchesSearch =
-      req.assetTag.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.assetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assetTag.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       req.issueDescription.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPriority = selectedPriority === "All" || req.priority === selectedPriority;
     return matchesSearch && matchesPriority;
@@ -145,6 +169,14 @@ const Maintenance = () => {
         return "bg-slate-100 text-slate-700 border-slate-200";
     }
   };
+
+  if (loading && requests.length === 0) {
+    return (
+      <div className="flex h-[400px] items-center justify-center text-sm font-semibold text-[#75808A]">
+        Loading maintenance board...
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -164,6 +196,12 @@ const Maintenance = () => {
           Raise Request
         </button>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-800">
+          {error}
+        </div>
+      )}
 
       {/* Filters Section */}
       <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-white p-4 shadow-sm border border-[#E7ECEF]">
@@ -225,16 +263,16 @@ const Maintenance = () => {
                     </span>
 
                     <h4 className="font-bold text-[#203030] text-sm group-hover:text-[#1F6E5A]">
-                      {req.assetTag}
+                      {req.asset?.assetTag || `Asset #${req.assetId}`}
                     </h4>
-                    <p className="text-xs text-[#75808A] font-medium">{req.assetName}</p>
+                    <p className="text-xs text-[#75808A] font-medium">{req.asset?.name}</p>
                     <p className="mt-2 text-xs text-[#203030] line-clamp-2">{req.issueDescription}</p>
 
                     {/* Technician display */}
                     {req.technician && (
                       <div className="mt-3 flex items-center gap-1.5 border-t border-[#F5F7F9] pt-2.5 text-[11px] text-[#75808A]">
                         <User size={12} />
-                        <span className="font-medium text-[#203030]">Tech: {req.technician}</span>
+                        <span className="font-medium text-[#203030]">Tech: {req.technician.name}</span>
                       </div>
                     )}
 
@@ -244,7 +282,7 @@ const Maintenance = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            moveRequest(req.id, "Approved");
+                            handleUpdateReq(req.id, { status: "Approved" });
                           }}
                           className="flex items-center gap-1 rounded bg-[#E0F2FE] px-2 py-1 text-[10px] font-bold text-[#0284C7] hover:bg-[#bae6fd]"
                         >
@@ -252,21 +290,34 @@ const Maintenance = () => {
                         </button>
                       )}
                       {req.status === "Approved" && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            moveRequest(req.id, "Assigned");
-                          }}
-                          className="flex items-center gap-1 rounded bg-[#FEF3C7] px-2 py-1 text-[10px] font-bold text-[#D97706] hover:bg-[#fde68a]"
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-1.5"
                         >
-                          <User size={10} /> Assign Tech
-                        </button>
+                          <select
+                            onChange={(e) => {
+                              const techId = Number(e.target.value);
+                              if (techId) {
+                                handleUpdateReq(req.id, { status: "Assigned", technicianId: techId });
+                              }
+                            }}
+                            defaultValue=""
+                            className="rounded border border-[#E7ECEF] bg-white px-1.5 py-0.5 text-[10px] font-semibold text-[#203030]"
+                          >
+                            <option value="" disabled>Assign Tech</option>
+                            {employees
+                              .filter((emp) => emp.role === "Employee")
+                              .map((emp) => (
+                                <option key={emp.id} value={emp.id}>{emp.name}</option>
+                              ))}
+                          </select>
+                        </div>
                       )}
                       {req.status === "Assigned" && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            moveRequest(req.id, "In_Progress");
+                            handleUpdateReq(req.id, { status: "In_Progress" });
                           }}
                           className="flex items-center gap-1 rounded bg-[#E0F2FE] px-2 py-1 text-[10px] font-bold text-[#0284C7] hover:bg-[#bae6fd]"
                         >
@@ -277,7 +328,7 @@ const Maintenance = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            moveRequest(req.id, "Resolved");
+                            handleUpdateReq(req.id, { status: "Resolved" });
                           }}
                           className="flex items-center gap-1 rounded bg-[#DCFCE7] px-2 py-1 text-[10px] font-bold text-[#16A34A] hover:bg-[#bbf7d0]"
                         >
@@ -309,8 +360,8 @@ const Maintenance = () => {
                 <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border mb-2 ${getPriorityColor(selectedRequest.priority)}`}>
                   {selectedRequest.priority} Priority
                 </span>
-                <h3 className="text-xl font-bold text-[#203030]">{selectedRequest.assetTag}</h3>
-                <p className="text-sm text-[#75808A]">{selectedRequest.assetName}</p>
+                <h3 className="text-xl font-bold text-[#203030]">{selectedRequest.asset?.assetTag || `Asset #${selectedRequest.assetId}`}</h3>
+                <p className="text-sm text-[#75808A]">{selectedRequest.asset?.name}</p>
               </div>
               <button
                 onClick={() => setSelectedRequest(null)}
@@ -321,6 +372,15 @@ const Maintenance = () => {
             </div>
 
             <div className="mt-4 flex flex-col gap-3">
+              {selectedRequest.photoUrl && (
+                <div className="w-full overflow-hidden rounded-xl border border-[#E7ECEF] max-h-[180px]">
+                  <img
+                    src={selectedRequest.photoUrl}
+                    alt="Asset issue detail"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-[#75808A]">Issue Description</span>
                 <p className="mt-1 text-sm text-[#203030] bg-[#F8FAFB] p-3 rounded-xl border border-[#E7ECEF]">
@@ -335,7 +395,7 @@ const Maintenance = () => {
                 </div>
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-[#75808A]">Reporter</span>
-                  <p className="mt-1 text-sm text-[#203030]">{selectedRequest.reporter}</p>
+                  <p className="mt-1 text-sm text-[#203030]">{selectedRequest.reporter?.name || "System"}</p>
                 </div>
               </div>
 
@@ -344,7 +404,7 @@ const Maintenance = () => {
                   <span className="text-xs font-bold uppercase tracking-wider text-[#75808A]">Assigned Technician</span>
                   <p className="mt-1 text-sm text-[#203030] flex items-center gap-1.5">
                     <User size={14} className="text-[#1F6E5A]" />
-                    {selectedRequest.technician}
+                    {selectedRequest.technician.name}
                   </p>
                 </div>
               )}
@@ -359,7 +419,10 @@ const Maintenance = () => {
               </button>
               {selectedRequest.status === "Pending" && (
                 <button
-                  onClick={() => moveRequest(selectedRequest.id, "Approved")}
+                  onClick={() => {
+                    handleUpdateReq(selectedRequest.id, { status: "Approved" });
+                    setSelectedRequest(null);
+                  }}
                   className="rounded-xl bg-[#1F6E5A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2C8A71]"
                 >
                   Approve Request
@@ -386,26 +449,20 @@ const Maintenance = () => {
 
             <form onSubmit={handleCreateRequest} className="mt-4 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-[#203030]">Asset Tag *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. AF-0062"
-                  value={newAssetTag}
-                  onChange={(e) => setNewAssetTag(e.target.value)}
+                <label className="text-xs font-semibold text-[#203030]">Select Asset *</label>
+                <select
+                  value={selectedAssetId}
+                  onChange={(e) => setSelectedAssetId(Number(e.target.value))}
                   required
-                  className="rounded-xl border border-[#E7ECEF] px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-[#203030]">Asset Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Epson Smart Projector"
-                  value={newAssetName}
-                  onChange={(e) => setNewAssetName(e.target.value)}
-                  className="rounded-xl border border-[#E7ECEF] px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
-                />
+                  className="rounded-xl border border-[#E7ECEF] bg-white px-3 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
+                >
+                  <option value="" disabled>-- Select an Asset --</option>
+                  {assets.map((asset) => (
+                    <option key={asset.id} value={asset.id}>
+                      [{asset.assetTag}] {asset.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -432,6 +489,17 @@ const Maintenance = () => {
                   <option value="High">High</option>
                   <option value="Urgent">Urgent</option>
                 </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-[#203030]">Photo URL</label>
+                <input
+                  type="url"
+                  placeholder="https://example.com/photo.jpg"
+                  value={newPhotoUrl}
+                  onChange={(e) => setNewPhotoUrl(e.target.value)}
+                  className="rounded-xl border border-[#E7ECEF] px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
+                />
               </div>
 
               <div className="mt-4 flex justify-end gap-2 border-t border-[#E7ECEF] pt-4">
