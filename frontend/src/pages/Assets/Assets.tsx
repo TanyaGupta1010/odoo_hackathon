@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Plus,
   Archive,
@@ -17,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BarChart3,
+  Check,
 } from "lucide-react";
 
 const stats = [
@@ -55,14 +57,32 @@ const stats = [
   },
 ];
 
-const filters = [
-  { label: "All (1,482)", active: true },
-  { label: "Hardware", active: false },
-  { label: "Mobile", active: false },
-  { label: "Facility", active: false },
+type Group = "all" | "Hardware" | "Mobile" | "Facility";
+
+const filters: { label: string; value: Group }[] = [
+  { label: "All (1,482)", value: "all" },
+  { label: "Hardware", value: "Hardware" },
+  { label: "Mobile", value: "Mobile" },
+  { label: "Facility", value: "Facility" },
 ];
 
 type Status = "available" | "maintenance" | "in-use";
+
+type SortKey = "default" | "name" | "category" | "status";
+
+const sortOptions: { label: string; value: SortKey }[] = [
+  { label: "Default", value: "default" },
+  { label: "Asset Name (A–Z)", value: "name" },
+  { label: "Category", value: "category" },
+  { label: "Status", value: "status" },
+];
+
+const statusFilters: { label: string; value: Status | "all" }[] = [
+  { label: "All statuses", value: "all" },
+  { label: "Available", value: "available" },
+  { label: "In use", value: "in-use" },
+  { label: "Maintenance", value: "maintenance" },
+];
 
 const statusStyles: Record<Status, string> = {
   available: "bg-[#E6F4EC] text-[#1F9D6B]",
@@ -75,15 +95,16 @@ const assets: {
   name: string;
   icon: React.ElementType;
   category: string;
+  group: Exclude<Group, "all">;
   status: Status;
   holder: string;
   holderInitials?: string;
 }[] = [
-  { id: "#AF-7721", name: 'MacBook Pro 16" (M3 Max)', icon: Laptop, category: "Hardware", status: "available", holder: "Stock Room B" },
-  { id: "#AF-8902", name: "Enterprise Plotter HP-Z9", icon: Printer, category: "Peripherals", status: "maintenance", holder: "Design Lab 4" },
-  { id: "#AF-1143", name: 'iPad Pro 12.9" Gen 6', icon: Tablet, category: "Mobile Hardware", status: "in-use", holder: "Jane Doe", holderInitials: "JD" },
-  { id: "#AF-5520", name: "Phase One IQ4 Digital Back", icon: Camera, category: "Studio Equip", status: "available", holder: "Studio A Archive" },
-  { id: "#AF-2018", name: "Cisco Catalyst 9300-48P", icon: Network, category: "Networking", status: "in-use", holder: "Main Server Room" },
+  { id: "#AF-7721", name: 'MacBook Pro 16" (M3 Max)', icon: Laptop, category: "Hardware", group: "Hardware", status: "available", holder: "Stock Room B" },
+  { id: "#AF-8902", name: "Enterprise Plotter HP-Z9", icon: Printer, category: "Peripherals", group: "Hardware", status: "maintenance", holder: "Design Lab 4" },
+  { id: "#AF-1143", name: 'iPad Pro 12.9" Gen 6', icon: Tablet, category: "Mobile Hardware", group: "Mobile", status: "in-use", holder: "Jane Doe", holderInitials: "JD" },
+  { id: "#AF-5520", name: "Phase One IQ4 Digital Back", icon: Camera, category: "Studio Equip", group: "Facility", status: "available", holder: "Studio A Archive" },
+  { id: "#AF-2018", name: "Cisco Catalyst 9300-48P", icon: Network, category: "Networking", group: "Facility", status: "in-use", holder: "Main Server Room" },
 ];
 
 const forecast = [
@@ -135,6 +156,24 @@ const CapacityDonut = ({ percent }: { percent: number }) => {
 const cardClass = "rounded-2xl border border-[#EAEEF2] bg-white";
 
 const Assets = () => {
+  const [group, setGroup] = useState<Group>("all");
+  const [status, setStatus] = useState<Status | "all">("all");
+  const [sortKey, setSortKey] = useState<SortKey>("default");
+  const [openMenu, setOpenMenu] = useState<"filter" | "sort" | null>(null);
+
+  const visible = assets
+    .filter((a) => group === "all" || a.group === group)
+    .filter((a) => status === "all" || a.status === status)
+    .sort((a, b) => {
+      if (sortKey === "name") return a.name.localeCompare(b.name);
+      if (sortKey === "category") return a.category.localeCompare(b.category);
+      if (sortKey === "status") return a.status.localeCompare(b.status);
+      return 0;
+    });
+
+  const toggleMenu = (menu: "filter" | "sort") =>
+    setOpenMenu((prev) => (prev === menu ? null : menu));
+
   return (
     <div className="pb-6">
       {/* Title row */}
@@ -168,21 +207,87 @@ const Assets = () => {
 
       {/* Table */}
       <div className={`${cardClass} mt-6`}>
-        <div className="flex items-center justify-between gap-3 border-b border-[#EAEEF2] p-4">
+        <div className="relative flex items-center justify-between gap-3 border-b border-[#EAEEF2] p-4">
+          {openMenu && (
+            <button
+              type="button"
+              aria-label="Close menu"
+              className="fixed inset-0 z-10 cursor-default"
+              onClick={() => setOpenMenu(null)}
+            />
+          )}
+
           <div className="flex gap-2">
-            <button className="flex items-center gap-1.5 rounded-lg border border-[#E1E6EA] px-3 py-1.5 text-xs font-semibold text-[#475467]">
-              <Filter size={14} /> Filter
-            </button>
-            <button className="flex items-center gap-1.5 rounded-lg border border-[#E1E6EA] px-3 py-1.5 text-xs font-semibold text-[#475467]">
-              <ArrowUpDown size={14} /> Sort
-            </button>
+            {/* Filter (by status) */}
+            <div className="relative z-20">
+              <button
+                onClick={() => toggleMenu("filter")}
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+                  status !== "all"
+                    ? "border-[#1F6E5A] bg-[#F2FBF7] text-[#1F6E5A]"
+                    : "border-[#E1E6EA] text-[#475467]"
+                }`}
+              >
+                <Filter size={14} /> Filter
+              </button>
+              {openMenu === "filter" && (
+                <div className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-[#E1E6EA] bg-white py-1 shadow-lg">
+                  {statusFilters.map((o) => (
+                    <button
+                      key={o.value}
+                      onClick={() => {
+                        setStatus(o.value);
+                        setOpenMenu(null);
+                      }}
+                      className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-[#475467] hover:bg-[#F5F7F9]"
+                    >
+                      {o.label}
+                      {status === o.value && <Check size={14} className="text-[#1F6E5A]" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sort */}
+            <div className="relative z-20">
+              <button
+                onClick={() => toggleMenu("sort")}
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+                  sortKey !== "default"
+                    ? "border-[#1F6E5A] bg-[#F2FBF7] text-[#1F6E5A]"
+                    : "border-[#E1E6EA] text-[#475467]"
+                }`}
+              >
+                <ArrowUpDown size={14} /> Sort
+              </button>
+              {openMenu === "sort" && (
+                <div className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-[#E1E6EA] bg-white py-1 shadow-lg">
+                  {sortOptions.map((o) => (
+                    <button
+                      key={o.value}
+                      onClick={() => {
+                        setSortKey(o.value);
+                        setOpenMenu(null);
+                      }}
+                      className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-[#475467] hover:bg-[#F5F7F9]"
+                    >
+                      {o.label}
+                      {sortKey === o.value && <Check size={14} className="text-[#1F6E5A]" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
+
           <div className="flex flex-wrap gap-2">
             {filters.map((f) => (
               <button
-                key={f.label}
+                key={f.value}
+                onClick={() => setGroup(f.value)}
                 className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                  f.active
+                  group === f.value
                     ? "bg-[#E6F4EC] text-[#1F6E5A]"
                     : "border border-[#E1E6EA] text-[#6B7683]"
                 }`}
@@ -206,7 +311,14 @@ const Assets = () => {
               </tr>
             </thead>
             <tbody>
-              {assets.map((a) => (
+              {visible.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-5 py-10 text-center text-sm text-[#8A97A5]">
+                    No assets match the current filters.
+                  </td>
+                </tr>
+              )}
+              {visible.map((a) => (
                 <tr key={a.id} className="border-t border-[#EEF1F4] text-sm">
                   <td className="px-5 py-4 font-semibold text-[#475467]">{a.id}</td>
                   <td className="px-5 py-4">
@@ -241,7 +353,9 @@ const Assets = () => {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#EAEEF2] p-4 text-xs text-[#8A97A5]">
-          <span>Showing 1 to 5 of 1,482 assets</span>
+          <span>
+            Showing {visible.length === 0 ? 0 : 1} to {visible.length} of {visible.length} assets
+          </span>
           <div className="flex items-center gap-1.5">
             <button className="flex h-7 w-7 items-center justify-center rounded-md border border-[#E1E6EA]">
               <ChevronLeft size={14} />
