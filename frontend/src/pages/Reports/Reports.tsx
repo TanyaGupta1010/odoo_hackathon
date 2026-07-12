@@ -1,41 +1,118 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
-import { Download, TrendingUp, AlertTriangle, Play, HelpCircle } from "lucide-react";
+import { Download, AlertTriangle } from "lucide-react";
 
-const departmentData = [
-  { name: "Engineering", utilization: 84 },
-  { name: "Facilities", utilization: 92 },
-  { name: "Field Ops", utilization: 75 },
-  { name: "HR", utilization: 45 },
-  { name: "Marketing", utilization: 68 },
-];
+const API_BASE = "http://localhost:5000/api";
 
-const maintenanceData = [
-  { month: "Jan", count: 4 },
-  { month: "Feb", count: 8 },
-  { month: "Mar", count: 6 },
-  { month: "Apr", count: 12 },
-  { month: "May", count: 9 },
-  { month: "Jun", count: 15 },
-  { month: "Jul", count: 17 },
-];
+interface DepartmentUtilization {
+  name: string;
+  utilization: number;
+}
+
+interface MaintenanceFrequency {
+  month: string;
+  count: number;
+}
+
+interface MostUsedAsset {
+  assetTag: string;
+  name: string;
+  category: string;
+  bookingsCount: number;
+}
+
+interface IdleAsset {
+  assetTag: string;
+  name: string;
+  idleDays: number;
+}
+
+interface DueForMaintenanceAsset {
+  id: number;
+  name: string;
+  assetTag: string;
+  type: string;
+  label: string;
+}
+
+interface ReportSummary {
+  utilizationByDepartment: DepartmentUtilization[];
+  maintenanceFrequency: MaintenanceFrequency[];
+  mostUsedAssets: MostUsedAsset[];
+  idleAssets: IdleAsset[];
+  dueForMaintenance: DueForMaintenanceAsset[];
+}
 
 const Reports = () => {
+  const [data, setData] = useState<ReportSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchSummary = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await axios.get(`${API_BASE}/reports/summary`);
+      if (res.data.success) {
+        setData(res.data.data);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to fetch reports summary from server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSummary();
+  }, []);
+
   const exportCSV = () => {
-    // Generate simple CSV download for mockup purposes
-    const headers = "Asset Tag,Asset Name,Category,Status,Utilization Count\n";
-    const rows = [
-      "Room B2,HQ Meeting Space,Spaces,Available,34",
-      "Van AF-343,Ford Transit Shuttle,Vehicles,Available,21",
-      "Projector AF-335,Epson projector,Electronics,Under Maintenance,18",
-    ].join("\n");
-    const blob = new Blob([headers + rows], { type: "text/csv" });
+    if (!data) return;
+    const headers = "Asset Tag,Asset Name,Category/Details,Type/Activity Metric\n";
+    
+    // Add most used
+    let rows = data.mostUsedAssets.map(
+      (a) => `"${a.assetTag}","${a.name}","${a.category}","${a.bookingsCount} Bookings"`
+    );
+    // Add idle
+    rows = rows.concat(
+      data.idleAssets.map(
+        (a) => `"${a.assetTag}","${a.name}","Idle Assets","Unused ${a.idleDays} Days"`
+      )
+    );
+    // Add due/retirement
+    rows = rows.concat(
+      data.dueForMaintenance.map(
+        (a) => `"${a.assetTag}","${a.name}","Alerts","${a.label}"`
+      )
+    );
+
+    const blob = new Blob([headers + rows.join("\n")], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.setAttribute("href", url);
-    a.setAttribute("download", "AssetFlow_Utilization_Report.csv");
+    a.setAttribute("download", "AssetFlow_Analytics_Report.csv");
     a.click();
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-[400px] items-center justify-center text-sm font-semibold text-[#75808A]">
+        Loading reports & analytics...
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="rounded-xl border border-red-100 bg-red-50 p-6 text-center text-sm text-red-800">
+        {error || "Failed to load dashboard data."}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,7 +140,7 @@ const Reports = () => {
           <h3 className="text-base font-bold text-[#203030] mb-4">Utilization by Department (%)</h3>
           <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={departmentData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={data.utilizationByDepartment} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F7F9" />
                 <XAxis dataKey="name" stroke="#75808A" fontSize={11} tickLine={false} />
                 <YAxis stroke="#75808A" fontSize={11} tickLine={false} domain={[0, 100]} />
@@ -79,7 +156,7 @@ const Reports = () => {
           <h3 className="text-base font-bold text-[#203030] mb-4">Maintenance Frequency (Monthly)</h3>
           <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={maintenanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LineChart data={data.maintenanceFrequency} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F7F9" />
                 <XAxis dataKey="month" stroke="#75808A" fontSize={11} tickLine={false} />
                 <YAxis stroke="#75808A" fontSize={11} tickLine={false} />
@@ -98,57 +175,40 @@ const Reports = () => {
           <div>
             <h3 className="text-base font-bold text-[#203030] mb-3">Most Used Assets</h3>
             <div className="divide-y divide-[#E7ECEF]">
-              <div className="py-3 flex justify-between items-center text-sm">
-                <div>
-                  <span className="font-semibold text-[#203030]">Room B2</span>
-                  <p className="text-xs text-[#75808A]">HQ Main Conference Space</p>
+              {data.mostUsedAssets.map((asset, index) => (
+                <div key={index} className="py-3 flex justify-between items-center text-sm">
+                  <div>
+                    <span className="font-semibold text-[#203030]">{asset.assetTag}</span>
+                    <p className="text-xs text-[#75808A]">{asset.name}</p>
+                  </div>
+                  <span className="rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+                    {asset.bookingsCount} bookings
+                  </span>
                 </div>
-                <span className="rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
-                  34 bookings this month
-                </span>
-              </div>
-              <div className="py-3 flex justify-between items-center text-sm">
-                <div>
-                  <span className="font-semibold text-[#203030]">Van AF-343</span>
-                  <p className="text-xs text-[#75808A]">Ford Transit Operations Shuttle</p>
-                </div>
-                <span className="rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
-                  21 trips this month
-                </span>
-              </div>
-              <div className="py-3 flex justify-between items-center text-sm">
-                <div>
-                  <span className="font-semibold text-[#203030]">Projector AF-335</span>
-                  <p className="text-xs text-[#75808A]">Epson Wireless HD Projector</p>
-                </div>
-                <span className="rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
-                  18 uses
-                </span>
-              </div>
+              ))}
+              {data.mostUsedAssets.length === 0 && (
+                <div className="text-center py-4 text-xs text-[#75808A]">No booking analytics yet.</div>
+              )}
             </div>
           </div>
 
           <div>
             <h3 className="text-base font-bold text-[#203030] mb-3">Idle Assets</h3>
             <div className="divide-y divide-[#E7ECEF]">
-              <div className="py-3 flex justify-between items-center text-sm">
-                <div>
-                  <span className="font-semibold text-[#203030]">Camera AF-0301</span>
-                  <p className="text-xs text-[#75808A]">Sony DSLR Mirrorless Kit</p>
+              {data.idleAssets.map((asset, index) => (
+                <div key={index} className="py-3 flex justify-between items-center text-sm">
+                  <div>
+                    <span className="font-semibold text-[#203030]">{asset.assetTag}</span>
+                    <p className="text-xs text-[#75808A]">{asset.name}</p>
+                  </div>
+                  <span className="rounded-full bg-slate-50 border border-[#E7ECEF] px-3 py-1 text-xs font-bold text-[#75808A]">
+                    unused {asset.idleDays}+ days
+                  </span>
                 </div>
-                <span className="rounded-full bg-slate-50 border border-[#E7ECEF] px-3 py-1 text-xs font-bold text-[#75808A]">
-                  unused 60+ days
-                </span>
-              </div>
-              <div className="py-3 flex justify-between items-center text-sm">
-                <div>
-                  <span className="font-semibold text-[#203030]">Chair AF-0410</span>
-                  <p className="text-xs text-[#75808A]">High-back Swivel Chair</p>
-                </div>
-                <span className="rounded-full bg-slate-50 border border-[#E7ECEF] px-3 py-1 text-xs font-bold text-[#75808A]">
-                  unused 45 days
-                </span>
-              </div>
+              ))}
+              {data.idleAssets.length === 0 && (
+                <div className="text-center py-4 text-xs text-[#75808A]">No idle assets found.</div>
+              )}
             </div>
           </div>
         </div>
@@ -157,27 +217,34 @@ const Reports = () => {
         <div className="rounded-2xl border border-[#E7ECEF] bg-white p-6 shadow-sm">
           <h3 className="text-base font-bold text-[#203030] mb-4">Assets Due for Maintenance / Nearing Retirement</h3>
           <div className="flex flex-col gap-4">
-            <div className="flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4 text-amber-800">
-              <AlertTriangle className="shrink-0 text-amber-600 mt-0.5" size={20} />
-              <div>
-                <h4 className="font-bold text-sm text-[#203030]">Forklift AF-0087</h4>
-                <p className="text-xs text-[#75808A] mt-0.5">Toyota Heavy Duty Reach Truck</p>
-                <span className="inline-block mt-2 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-                  Service due in 5 days
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4 text-red-800">
-              <AlertTriangle className="shrink-0 text-red-600 mt-0.5" size={20} />
-              <div>
-                <h4 className="font-bold text-sm text-[#203030]">Laptop AF-0020</h4>
-                <p className="text-xs text-[#75808A] mt-0.5">Apple MacBook Pro 16-inch</p>
-                <span className="inline-block mt-2 rounded bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
-                  4 years old : nearing retirement
-                </span>
-              </div>
-            </div>
+            {data.dueForMaintenance.map((asset, index) => {
+              const isRetirement = asset.type === "retirement";
+              return (
+                <div
+                  key={index}
+                  className={`flex items-start gap-3 rounded-xl border p-4 ${
+                    isRetirement
+                      ? "border-red-100 bg-red-50 text-red-800"
+                      : "border-amber-100 bg-amber-50 text-amber-800"
+                  }`}
+                >
+                  <AlertTriangle className={`shrink-0 mt-0.5 ${isRetirement ? "text-red-600" : "text-amber-600"}`} size={20} />
+                  <div>
+                    <h4 className="font-bold text-sm text-[#203030]">{asset.name} ({asset.assetTag})</h4>
+                    <span
+                      className={`inline-block mt-2 rounded px-2 py-0.5 text-[10px] font-bold ${
+                        isRetirement ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {asset.label}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            {data.dueForMaintenance.length === 0 && (
+              <div className="text-center py-8 text-xs text-[#75808A]">No warnings or maintenance updates.</div>
+            )}
           </div>
         </div>
       </div>
