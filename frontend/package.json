@@ -10,7 +10,6 @@
     "preview": "vite preview",
     "generate:pages": "node scripts/generate-pages.js"
   },
-  
   "dependencies": {
     "@tailwindcss/vite": "^4.3.2",
     "axios": "^1.18.1",

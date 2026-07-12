@@ -1,53 +1,37 @@
+@import "tailwindcss";
 @import "./variables.css";
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-html{
-
-    font-family:Inter,sans-serif;
-
-    background:var(--color-background);
-
+html {
+  font-family: Inter, sans-serif;
+  background: var(--color-background);
 }
 
-body{
-
-    background:var(--color-background);
-
-    color:var(--color-text);
-
+body {
+  background: var(--color-background);
+  color: var(--color-text);
 }
 
-button{
-
-    cursor:pointer;
-
-    border:none;
-
+button {
+  cursor: pointer;
+  border: none;
 }
 
-a{
-
-    text-decoration:none;
-
-    color:inherit;
-
+a {
+  text-decoration: none;
+  color: inherit;
 }
 
-input{
-
-    outline:none;
-
+input {
+  outline: none;
 }
 
-img{
-
-    display:block;
-
-    width:100%;
-
+img {
+  display: block;
+  max-width: 100%;
 }

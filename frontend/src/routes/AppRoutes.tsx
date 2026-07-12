@@ -3,6 +3,8 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Login from "../pages/Login";
 import Dashboard from "../pages/Dashboard";
 
+import MainLayout from "../layouts/MainLayout";
+
 const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -11,7 +13,9 @@ const AppRoutes = () => {
 
         <Route path="/login" element={<Login />} />
 
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route element={<MainLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
