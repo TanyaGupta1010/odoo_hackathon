@@ -1,0 +1,224 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 1. Departments (Screen 3)
+model Department {
+  id                  Int          @id @default(autoincrement())
+  name                String       @unique
+  parentDepartmentId  Int?         @map("parent_department_id")
+  status              String       @default("Active") // "Active", "Inactive"
+  createdAt           DateTime     @default(now()) @map("created_at")
+  
+  parentDepartment    Department?  @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id])
+  subDepartments      Department[] @relation("DepartmentHierarchy")
+  
+  headId              Int?         @unique @map("head_id")
+  head                Employee?    @relation("DepartmentHead", fields: [headId], references: [id], onDelete: SetNull)
+
+  employees           Employee[]   @relation("EmployeeDepartment")
+  allocations         Allocation[]
+  auditCycles         AuditCycle[]
+
+  @@map("departments")
+}
+
+// 2. Employees (Screen 1 & Screen 3)
+model Employee {
+  id                  Int                @id @default(autoincrement())
+  name                String
+  email               String             @unique
+  passwordHash        String             @map("password_hash")
+  role                String             @default("Employee") // "Admin", "Asset Manager", "Department Head", "Employee"
+  departmentId        Int?               @map("department_id")
+  status              String             @default("Active") // "Active", "Inactive"
+  createdAt           DateTime           @default(now()) @map("created_at")
+
+  department          Department?        @relation("EmployeeDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
+  headedDepartment    Department?        @relation("DepartmentHead")
+
+  allocations         Allocation[]
+  outgoingTransfers   TransferRequest[]  @relation("FromEmployee")
+  incomingTransfers   TransferRequest[]  @relation("ToEmployee")
+  approvedTransfers   TransferRequest[]  @relation("Approver")
+  bookings            Booking[]
+  reportedMaintenance MaintenanceRequest[] @relation("Reporter")
+  assignedMaintenance MaintenanceRequest[] @relation("Technician")
+  createdAudits       AuditCycle[]       @relation("AuditCreator")
+  verifiedAudits      AuditItem[]        @relation("Auditor")
+  logs                ActivityLog[]
+
+  @@map("employees")
+}
+
+// 3. Asset Categories (Screen 3)
+model AssetCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  customFields Json?   @map("custom_fields") // For category-specific fields like {"warranty_months": 24}
+
+  assets      Asset[]
+
+  @@map("asset_categories")
+}
+
+// 4. Assets (Screen 4)
+model Asset {
+  id               Int                  @id @default(autoincrement())
+  assetTag         String               @unique @map("asset_tag") // e.g. AF-0001
+  name             String
+  categoryId       Int                  @map("category_id")
+  serialNumber     String?              @unique @map("serial_number")
+  acquisitionDate  DateTime?            @map("acquisition_date")
+  acquisitionCost  Decimal?             @map("acquisition_cost") @db.Decimal(12, 2)
+  condition        String               @default("New") // "New", "Good", "Fair", "Poor"
+  location         String?
+  isShared         Boolean              @default(false) @map("is_shared")
+  status           String               @default("Available") 
+  // "Available", "Allocated", "Reserved", "Under Maintenance", "Lost", "Retired", "Disposed"
+  photoUrl         String?              @map("photo_url")
+  createdAt        DateTime             @default(now()) @map("created_at")
+
+  category         AssetCategory        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  allocations      Allocation[]
+  transferRequests TransferRequest[]
+  bookings         Booking[]
+  maintenance      MaintenanceRequest[]
+  auditItems       AuditItem[]
+
+  @@map("assets")
+}
+
+// 5. Asset Allocations & Transfers (Screen 5)
+model Allocation {
+  id                 Int        @id @default(autoincrement())
+  assetId            Int        @map("asset_id")
+  employeeId         Int?       @map("employee_id")
+  departmentId       Int?       @map("department_id")
+  allocatedAt        DateTime   @default(now()) @map("allocated_at")
+  expectedReturnDate DateTime?  @map("expected_return_date")
+  returnedAt         DateTime?  @map("returned_at")
+  returnCondition    String?    @map("return_condition")
+  checkinNotes       String?    @map("checkin_notes")
+
+  asset              Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  employee           Employee?  @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  department         Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@map("allocations")
+}
+
+model TransferRequest {
+  id             Int       @id @default(autoincrement())
+  assetId        Int       @map("asset_id")
+  fromEmployeeId Int       @map("from_employee_id")
+  toEmployeeId   Int       @map("to_employee_id")
+  reason         String?
+  status         String    @default("Pending") // "Pending", "Approved", "Rejected"
+  approvedById   Int?      @map("approved_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime? @updatedAt @map("updated_at")
+
+  asset          Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  fromEmployee   Employee  @relation("FromEmployee", fields: [fromEmployeeId], references: [id])
+  toEmployee     Employee  @relation("ToEmployee", fields: [toEmployeeId], references: [id])
+  approver       Employee? @relation("Approver", fields: [approvedById], references: [id])
+
+  @@map("transfer_requests")
+}
+
+// 6. Resource Bookings (Screen 6)
+model Booking {
+  id         Int      @id @default(autoincrement())
+  resourceId Int      @map("resource_id") // shared assets are bookable resources
+  employeeId Int      @map("employee_id")
+  startTime  DateTime @map("start_time")
+  endTime    DateTime @map("end_time")
+  status     String   @default("Upcoming") // "Upcoming", "Ongoing", "Completed", "Cancelled"
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  resource   Asset    @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+}
+
+// ==========================================
+// USER'S SEGMENT: SCREENS 7, 8, 9, 10
+// ==========================================
+
+// 7. Maintenance Management (Screen 7)
+model MaintenanceRequest {
+  id               Int       @id @default(autoincrement())
+  assetId          Int       @map("asset_id")
+  reporterId       Int?      @map("reporter_id")
+  technicianId     Int?      @map("technician_id")
+  issueDescription String    @map("issue_description")
+  priority         String    @default("Medium") // "Low", "Medium", "High", "Urgent"
+  status           String    @default("Pending") // "Pending", "Approved", "Assigned", "In_Progress", "Resolved"
+  photoUrl         String?   @map("photo_url")
+  aiPredictedFault String?   @map("ai_predicted_fault")
+  aiEstimatedCost  Decimal?  @map("ai_estimated_cost") @db.Decimal(10, 2)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  resolvedAt       DateTime? @map("resolved_at")
+
+  asset            Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  reporter         Employee? @relation("Reporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  technician       Employee? @relation("Technician", fields: [technicianId], references: [id], onDelete: SetNull)
+
+  @@map("maintenance_requests")
+}
+
+// 8. Audit Cycles (Screen 8)
+model AuditCycle {
+  id           Int         @id @default(autoincrement())
+  title        String
+  departmentId Int?        @map("department_id")
+  location     String?
+  startDate    DateTime    @map("start_date")
+  endDate      DateTime    @map("end_date")
+  status       String      @default("Active") // "Active", "Closed"
+  createdById  Int?        @map("created_by_id")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  creator      Employee?   @relation("AuditCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  auditItems   AuditItem[]
+
+  @@map("audit_cycles")
+}
+
+model AuditItem {
+  id           Int        @id @default(autoincrement())
+  auditCycleId Int        @map("audit_cycle_id")
+  assetId      Int        @map("asset_id")
+  auditorId    Int?       @map("auditor_id")
+  status       String     @default("Pending") // "Pending", "Verified", "Missing", "Damaged"
+  notes        String?
+  verifiedAt   DateTime?  @map("verified_at")
+
+  auditCycle   AuditCycle @relation(fields: [auditCycleId], references: [id], onDelete: Cascade)
+  asset        Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  auditor      Employee?  @relation("Auditor", fields: [auditorId], references: [id], onDelete: SetNull)
+
+  @@map("audit_items")
+}
+
+// 9. Activity Logs & Notifications (Screen 10)
+model ActivityLog {
+  id         Int      @id @default(autoincrement())
+  actorId    Int?     @map("actor_id")
+  actionType String   @map("action_type") // e.g. "ALLOCATE", "MAINTENANCE_APPROVED"
+  details    String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actor      Employee? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@map("activity_logs")
+}
