@@ -34,24 +34,30 @@ export default function AllocationForm({
   }
 
   async function handleSubmit(
-    e: React.FormEvent
-  ) {
-    e.preventDefault();
+  e: React.FormEvent
+) {
+  e.preventDefault();
 
-    if (!assetId || !employeeId) return;
+  if (!assetId || !employeeId) return;
 
-    await allocationService.create({
+  try {
+    const res = await allocationService.create({
       assetId: Number(assetId),
       employeeId: Number(employeeId),
       expectedReturnDate,
     });
 
+    console.log("CREATE RESPONSE:", res);
+
     setAssetId("");
     setEmployeeId("");
     setExpectedReturnDate("");
 
-    onSuccess();
+    await onSuccess();
+  } catch (err) {
+    console.error("CREATE ERROR:", err);
   }
+}
 
   return (
     <div className="rounded-xl border bg-white p-6 shadow-sm">
