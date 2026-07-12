@@ -1,630 +1,293 @@
-import React, { useState, useEffect } from "react";
-import { api } from "../../services/http";
-import { Building2, Layers, Users, Plus, ShieldCheck, CheckCircle2, XCircle, Edit, Trash2 } from "lucide-react";
+import { useState } from "react";
+import type { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Info,
+  Pencil,
+  User,
+  Plus,
+  ArrowRight,
+  X,
+  ClipboardList,
+  ShieldCheck,
+} from "lucide-react";
 
-interface Department {
-  id: number;
-  name: string;
-  parentDepartmentId?: number | null;
-  status: "Active" | "Inactive";
-  headId?: number | null;
-  head?: { id: number; name: string } | null;
-  parentDepartment?: { id: number; name: string } | null;
-}
+type Status = "Active" | "Inactive";
+type Department = { name: string; head: string; parent: string; status: Status };
 
-interface AssetCategory {
-  id: number;
-  name: string;
-  description?: string | null;
-  customFields?: any;
-}
+const initialDepartments: Department[] = [
+  { name: "Engineering", head: "Aditi Rao", parent: "—", status: "Active" },
+  { name: "Facilities", head: "Rohan Mehta", parent: "—", status: "Active" },
+  { name: "Field Ops (East)", head: "Sana Iqbal", parent: "Field Ops", status: "Inactive" },
+];
 
-interface Employee {
-  id: number;
-  name: string;
-  email: string;
-  role: "Admin" | "Asset Manager" | "Department Head" | "Employee";
-  status: "Active" | "Inactive";
-  departmentId?: number | null;
-  department?: { id: number; name: string } | null;
-}
+const tabs = ["Departments", "Categories", "Employee"] as const;
+type Tab = (typeof tabs)[number];
 
-const Organization = () => {
-  const [activeTab, setActiveTab] = useState<"departments" | "categories" | "employees">("departments");
-  
-  // Data States
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [categories, setCategories] = useState<AssetCategory[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  
-  // Loading & Error States
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+const tools = [
+  {
+    icon: ClipboardList,
+    title: "Audit Logs",
+    body: "Review history of changes made to organization units and heads.",
+    to: "/notifications",
+    arrow: false,
+  },
+  {
+    icon: ShieldCheck,
+    title: "Policy Mapping",
+    body: "Assign procurement and allocation policies to specific departments.",
+    to: "/allocation",
+    arrow: true,
+  },
+];
 
-  // Modal / Form States
-  const [showDeptModal, setShowDeptModal] = useState(false);
-  const [editingDept, setEditingDept] = useState<Department | null>(null);
-  const [deptForm, setDeptForm] = useState({ name: "", parentDepartmentId: "", headId: "", status: "Active" });
+const inputClass =
+  "w-full rounded-lg border border-[#E1E6EA] bg-[#F7F9FA] px-3 py-2 text-sm text-[#203030] focus:border-[#1F6E5A] focus:bg-white focus:outline-none";
 
-  const [showCatModal, setShowCatModal] = useState(false);
-  const [editingCat, setEditingCat] = useState<AssetCategory | null>(null);
-  const [catForm, setCatForm] = useState({ name: "", description: "" });
+const DepartmentModal = ({
+  initial,
+  onClose,
+  onSave,
+}: {
+  initial: Department | null;
+  onClose: () => void;
+  onSave: (d: Department) => void;
+}) => {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [head, setHead] = useState(initial?.head ?? "");
+  const [parent, setParent] = useState(
+    initial?.parent && initial.parent !== "—" ? initial.parent : "",
+  );
+  const [status, setStatus] = useState<Status>(initial?.status ?? "Active");
 
-  const [showEmpModal, setShowEmpModal] = useState(false);
-  const [editingEmp, setEditingEmp] = useState<Employee | null>(null);
-  const [empForm, setEmpForm] = useState({ role: "Employee", departmentId: "", status: "Active" });
-
-  // Fetch all organizational data
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      
-      const [deptRes, catRes, empRes] = await Promise.all([
-        api.get("/org/departments"),
-        api.get("/org/categories"),
-        api.get("/org/employees"),
-      ]);
-
-      setDepartments(deptRes.data.data);
-      setCategories(catRes.data.data);
-      setEmployees(empRes.data.data);
-    } catch (err: any) {
-      console.error(err);
-      setError("Failed to fetch organizational configuration from server.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  // --- Department Actions ---
-  const handleSaveDept = async (e: React.FormEvent) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
-    try {
-      const payload = {
-        name: deptForm.name,
-        parentDepartmentId: deptForm.parentDepartmentId ? Number(deptForm.parentDepartmentId) : null,
-        headId: deptForm.headId ? Number(deptForm.headId) : null,
-        status: deptForm.status,
-      };
-
-      if (editingDept) {
-        await api.patch(`/org/departments/${editingDept.id}`, payload);
-      } else {
-        await api.post("/org/departments", payload);
-      }
-
-      setShowDeptModal(false);
-      setEditingDept(null);
-      fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to save department.");
-    }
-  };
-
-  const openEditDept = (dept: Department) => {
-    setEditingDept(dept);
-    setDeptForm({
-      name: dept.name,
-      parentDepartmentId: dept.parentDepartmentId ? String(dept.parentDepartmentId) : "",
-      headId: dept.headId ? String(dept.headId) : "",
-      status: dept.status,
+    if (!name.trim()) return;
+    onSave({
+      name: name.trim(),
+      head: head.trim() || "Unassigned",
+      parent: parent.trim() || "—",
+      status,
     });
-    setShowDeptModal(true);
   };
-
-  // --- Category Actions ---
-  const handleSaveCat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        name: catForm.name,
-        description: catForm.description,
-      };
-
-      if (editingCat) {
-        await api.patch(`/org/categories/${editingCat.id}`, payload);
-      } else {
-        await api.post("/org/categories", payload);
-      }
-
-      setShowCatModal(false);
-      setEditingCat(null);
-      fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to save asset category.");
-    }
-  };
-
-  const openEditCat = (cat: AssetCategory) => {
-    setEditingCat(cat);
-    setCatForm({
-      name: cat.name,
-      description: cat.description || "",
-    });
-    setShowCatModal(true);
-  };
-
-  // --- Employee Assignment Actions ---
-  const handleSaveEmp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        role: empForm.role,
-        departmentId: empForm.departmentId ? Number(empForm.departmentId) : null,
-        status: empForm.status,
-      };
-
-      if (editingEmp) {
-        await api.patch(`/org/employees/${editingEmp.id}`, payload);
-      }
-
-      setShowEmpModal(false);
-      setEditingEmp(null);
-      fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to save employee assignment.");
-    }
-  };
-
-  const openEditEmp = (emp: Employee) => {
-    setEditingEmp(emp);
-    setEmpForm({
-      role: emp.role,
-      departmentId: emp.departmentId ? String(emp.departmentId) : "",
-      status: emp.status,
-    });
-    setShowEmpModal(true);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex h-[400px] items-center justify-center text-sm font-semibold text-[#75808A]">
-        Loading organizational configurations...
-      </div>
-    );
-  }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[#203030]">Organization Setup</h1>
-          <p className="mt-1 text-sm text-[#75808A]">
-            Manage departments, asset categories, and assign roles & departments to employees.
-          </p>
-        </div>
-
-        {/* Add Button */}
-        {activeTab !== "employees" && (
-          <button
-            onClick={() => {
-              if (activeTab === "departments") {
-                setEditingDept(null);
-                setDeptForm({ name: "", parentDepartmentId: "", headId: "", status: "Active" });
-                setShowDeptModal(true);
-              } else if (activeTab === "categories") {
-                setEditingCat(null);
-                setCatForm({ name: "", description: "" });
-                setShowCatModal(true);
-              }
-            }}
-            className="flex items-center justify-center gap-2 rounded-xl bg-[#1F6E5A] px-5 py-3 font-semibold text-white shadow-md transition hover:bg-[#2C8A71]"
-          >
-            <Plus size={18} />
-            Add {activeTab === "departments" ? "Department" : "Category"}
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-[#1A2B4A]">
+            {initial ? "Edit Department" : "Add Department"}
+          </h2>
+          <button onClick={onClose} aria-label="Close" className="text-[#8A97A5] hover:text-[#475467]">
+            <X size={18} />
           </button>
-        )}
-      </div>
-
-      {error && (
-        <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-800">
-          {error}
         </div>
-      )}
 
-      {/* Tabs System */}
-      <div className="flex border-b border-[#E7ECEF] bg-white rounded-t-2xl p-4 gap-2">
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold tracking-wide text-[#4A5560]">
+              DEPARTMENT NAME
+            </label>
+            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Engineering" className={inputClass} />
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold tracking-wide text-[#4A5560]">
+              DEPARTMENT HEAD
+            </label>
+            <input value={head} onChange={(e) => setHead(e.target.value)} placeholder="e.g. Aditi Rao" className={inputClass} />
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold tracking-wide text-[#4A5560]">
+              PARENT DEPARTMENT
+            </label>
+            <input value={parent} onChange={(e) => setParent(e.target.value)} placeholder="Optional" className={inputClass} />
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold tracking-wide text-[#4A5560]">
+              STATUS
+            </label>
+            <select value={status} onChange={(e) => setStatus(e.target.value as Status)} className={inputClass}>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="rounded-lg border border-[#E1E6EA] px-4 py-2 text-sm font-semibold text-[#475467]">
+              Cancel
+            </button>
+            <button type="submit" className="rounded-lg bg-[#1F6E5A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#195C4B]">
+              {initial ? "Save Changes" : "Add Department"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const Organization = () => {
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<Tab>("Departments");
+  const [departments, setDepartments] = useState<Department[]>(initialDepartments);
+  const [modal, setModal] = useState<{ open: boolean; editIndex: number | null }>({
+    open: false,
+    editIndex: null,
+  });
+
+  const openAdd = () => setModal({ open: true, editIndex: null });
+  const openEdit = (i: number) => setModal({ open: true, editIndex: i });
+  const closeModal = () => setModal({ open: false, editIndex: null });
+
+  const save = (d: Department) => {
+    setDepartments((list) =>
+      modal.editIndex === null
+        ? [...list, d]
+        : list.map((x, i) => (i === modal.editIndex ? d : x)),
+    );
+    closeModal();
+  };
+
+  return (
+    <div className="pb-6">
+      <h1 className="text-2xl font-bold tracking-tight text-[#1A2B4A]">Organization Setup</h1>
+
+      {/* Tabs + Add */}
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-1 rounded-xl bg-[#EEF2F5] p-1">
+          {tabs.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`rounded-lg px-4 py-1.5 text-sm font-semibold ${
+                tab === t ? "bg-[#1F6E5A] text-white" : "text-[#475467] hover:text-[#1A2B4A]"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
         <button
-          onClick={() => setActiveTab("departments")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
-            activeTab === "departments"
-              ? "bg-[#1F6E5A] text-white"
-              : "text-[#75808A] hover:bg-[#F8FAFB] hover:text-[#203030]"
-          }`}
+          onClick={openAdd}
+          className="flex items-center gap-2 rounded-lg bg-[#1F6E5A] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#195C4B]"
         >
-          <Building2 size={16} />
-          Departments
-        </button>
-        <button
-          onClick={() => setActiveTab("categories")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
-            activeTab === "categories"
-              ? "bg-[#1F6E5A] text-white"
-              : "text-[#75808A] hover:bg-[#F8FAFB] hover:text-[#203030]"
-          }`}
-        >
-          <Layers size={16} />
-          Categories
-        </button>
-        <button
-          onClick={() => setActiveTab("employees")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
-            activeTab === "employees"
-              ? "bg-[#1F6E5A] text-white"
-              : "text-[#75808A] hover:bg-[#F8FAFB] hover:text-[#203030]"
-          }`}
-        >
-          <Users size={16} />
-          Employees
+          <Plus size={16} /> Add {tab === "Departments" ? "Department" : tab.replace(/s$/, "")}
         </button>
       </div>
 
-      {/* Dynamic Content Panel */}
-      <div className="rounded-2xl border border-[#E7ECEF] bg-white shadow-sm overflow-hidden">
-        {activeTab === "departments" && (
+      {/* Info banner */}
+      <div className="mt-5 flex items-center gap-2.5 rounded-xl border border-[#DCEBE3] bg-[#EEF6F1] px-4 py-3">
+        <Info size={16} className="shrink-0 text-[#1F6E5A]" />
+        <p className="text-sm italic text-[#4A6B5C]">
+          Editing a department here also drives the picklist in asset allocation and resource
+          booking screens.
+        </p>
+      </div>
+
+      {/* Content */}
+      {tab === "Departments" ? (
+        <div className="mt-5 rounded-2xl border border-[#EAEEF2] bg-white">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-[#203030]">
-              <thead className="bg-[#F8FAFB] text-xs font-bold uppercase tracking-wider text-[#75808A] border-b border-[#E7ECEF]">
-                <tr>
-                  <th className="px-6 py-4">Department</th>
-                  <th className="px-6 py-4">Head</th>
-                  <th className="px-6 py-4">Parent Dept</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+            <table className="w-full min-w-[720px] text-left">
+              <thead>
+                <tr className="border-b border-[#EAEEF2] text-[11px] font-semibold tracking-wide text-[#8A97A5]">
+                  <th className="px-5 py-3">DEPARTMENT NAME</th>
+                  <th className="px-5 py-3">DEPARTMENT HEAD</th>
+                  <th className="px-5 py-3">PARENT DEPARTMENT</th>
+                  <th className="px-5 py-3">STATUS</th>
+                  <th className="px-5 py-3 text-right">ACTIONS</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E7ECEF]">
-                {departments.map((dept) => (
-                  <tr key={dept.id} className="transition hover:bg-[#F8FAFB]">
-                    <td className="px-6 py-4 font-bold text-[#203030]">{dept.name}</td>
-                    <td className="px-6 py-4 text-[#75808A]">
-                      {dept.head?.name || "—"}
+              <tbody>
+                {departments.map((d, i) => (
+                  <tr key={d.name} className="border-b border-[#EEF1F4] text-sm last:border-0">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="h-5 w-1 rounded-full"
+                          style={{ background: d.status === "Active" ? "#1F6E5A" : "#C7CED4" }}
+                        />
+                        <span className="font-semibold text-[#1A2B4A]">{d.name}</span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-[#75808A]">
-                      {dept.parentDepartment?.name || "—"}
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2 text-[#475467]">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#F2F5F8] text-[#8A97A5]">
+                          <User size={13} />
+                        </span>
+                        {d.head}
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-4 text-[#475467]">{d.parent}</td>
+                    <td className="px-5 py-4">
                       <span
-                        className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          dept.status === "Active"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-slate-100 text-slate-700 border-slate-200"
+                        className={`inline-block rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                          d.status === "Active"
+                            ? "bg-[#E6F4EC] text-[#1F9D6B]"
+                            : "bg-[#EEF2F5] text-[#75808A]"
                         }`}
                       >
-                        {dept.status}
+                        {d.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-5 py-4 text-right">
                       <button
-                        onClick={() => openEditDept(dept)}
-                        className="text-[#1F6E5A] hover:text-[#2C8A71] font-semibold"
+                        onClick={() => openEdit(i)}
+                        aria-label={`Edit ${d.name}`}
+                        className="text-[#8A97A5] hover:text-[#1F6E5A]"
                       >
-                        <Edit size={16} />
+                        <Pencil size={15} />
                       </button>
                     </td>
                   </tr>
                 ))}
-                {departments.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="text-center py-8 text-xs text-[#75808A]">
-                      No departments configured.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
-        )}
 
-        {activeTab === "categories" && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-[#203030]">
-              <thead className="bg-[#F8FAFB] text-xs font-bold uppercase tracking-wider text-[#75808A] border-b border-[#E7ECEF]">
-                <tr>
-                  <th className="px-6 py-4">Category Name</th>
-                  <th className="px-6 py-4">Description</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E7ECEF]">
-                {categories.map((cat) => (
-                  <tr key={cat.id} className="transition hover:bg-[#F8FAFB]">
-                    <td className="px-6 py-4 font-bold text-[#203030]">{cat.name}</td>
-                    <td className="px-6 py-4 text-[#75808A]">
-                      {cat.description || "—"}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => openEditCat(cat)}
-                        className="text-[#1F6E5A] hover:text-[#2C8A71] font-semibold"
-                      >
-                        <Edit size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {categories.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="text-center py-8 text-xs text-[#75808A]">
-                      No categories configured.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="flex items-center justify-between gap-3 border-t border-[#EAEEF2] p-4 text-xs text-[#8A97A5]">
+            <span>
+              Showing {departments.length} of {departments.length} departments
+            </span>
+            <div className="flex gap-2">
+              <button disabled className="rounded-md border border-[#E1E6EA] px-3 py-1 font-semibold text-[#475467] disabled:opacity-40">
+                Previous
+              </button>
+              <button disabled className="rounded-md border border-[#E1E6EA] px-3 py-1 font-semibold text-[#475467] disabled:opacity-40">
+                Next
+              </button>
+            </div>
           </div>
-        )}
+        </div>
+      ) : (
+        <div className="mt-5 rounded-2xl border border-[#EAEEF2] bg-white p-12 text-center text-sm text-[#8A97A5]">
+          No {tab.toLowerCase()} configured yet. Use “Add {tab.replace(/s$/, "")}” to create one.
+        </div>
+      )}
 
-        {activeTab === "employees" && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-[#203030]">
-              <thead className="bg-[#F8FAFB] text-xs font-bold uppercase tracking-wider text-[#75808A] border-b border-[#E7ECEF]">
-                <tr>
-                  <th className="px-6 py-4">Name</th>
-                  <th className="px-6 py-4">Email</th>
-                  <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4">Department</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Assign/Edit</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E7ECEF]">
-                {employees.map((emp) => (
-                  <tr key={emp.id} className="transition hover:bg-[#F8FAFB]">
-                    <td className="px-6 py-4 font-bold text-[#203030]">{emp.name}</td>
-                    <td className="px-6 py-4 text-[#75808A]">{emp.email}</td>
-                    <td className="px-6 py-4 text-[#75808A] font-semibold">{emp.role}</td>
-                    <td className="px-6 py-4 text-[#75808A]">
-                      {emp.department?.name || "Not Assigned"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          emp.status === "Active"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-slate-100 text-slate-700 border-slate-200"
-                        }`}
-                      >
-                        {emp.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => openEditEmp(emp)}
-                        className="text-[#1F6E5A] hover:text-[#2C8A71] font-semibold"
-                      >
-                        <Edit size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      {/* Tool cards */}
+      <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
+        {tools.map((t) => (
+          <button
+            key={t.title}
+            onClick={() => navigate(t.to)}
+            className="relative rounded-2xl border border-[#EAEEF2] bg-white p-5 text-left transition hover:border-[#1F6E5A]/40 hover:shadow-sm"
+          >
+            {t.arrow && <ArrowRight size={16} className="absolute right-5 top-5 text-[#8A97A5]" />}
+            <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#EEF2F5] text-[#1F6E5A]">
+              <t.icon size={20} />
+            </span>
+            <h3 className="text-base font-bold text-[#1A2B4A]">{t.title}</h3>
+            <p className="mt-1 text-sm leading-relaxed text-[#8A97A5]">{t.body}</p>
+          </button>
+        ))}
       </div>
 
-      {/* --- Department Modal --- */}
-      {showDeptModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <form
-            onSubmit={handleSaveDept}
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-[#E7ECEF]"
-          >
-            <h3 className="text-lg font-bold text-[#203030]">
-              {editingDept ? "Edit Department" : "Create Department"}
-            </h3>
-
-            <div className="mt-4 flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-bold text-[#75808A]">Department Name</label>
-                <input
-                  type="text"
-                  required
-                  value={deptForm.name}
-                  onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
-                  placeholder="e.g. Facilities, Field Ops"
-                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-[#75808A]">Department Head</label>
-                <select
-                  value={deptForm.headId}
-                  onChange={(e) => setDeptForm({ ...deptForm, headId: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
-                >
-                  <option value="">Select Department Head (Optional)</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-[#75808A]">Parent Department</label>
-                <select
-                  value={deptForm.parentDepartmentId}
-                  onChange={(e) => setDeptForm({ ...deptForm, parentDepartmentId: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
-                >
-                  <option value="">Select Parent Department (Optional)</option>
-                  {departments
-                    .filter((d) => !editingDept || d.id !== editingDept.id)
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-[#75808A]">Status</label>
-                <select
-                  value={deptForm.status}
-                  onChange={(e) => setDeptForm({ ...deptForm, status: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2 border-t border-[#E7ECEF] pt-4">
-              <button
-                type="button"
-                onClick={() => setShowDeptModal(false)}
-                className="rounded-xl border border-[#E7ECEF] px-4 py-2 text-sm font-semibold text-[#75808A] hover:bg-[#F8FAFB]"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="rounded-xl bg-[#1F6E5A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2C8A71]"
-              >
-                Save
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* --- Category Modal --- */}
-      {showCatModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <form
-            onSubmit={handleSaveCat}
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-[#E7ECEF]"
-          >
-            <h3 className="text-lg font-bold text-[#203030]">
-              {editingCat ? "Edit Category" : "Create Asset Category"}
-            </h3>
-
-            <div className="mt-4 flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-bold text-[#75808A]">Category Name</label>
-                <input
-                  type="text"
-                  required
-                  value={catForm.name}
-                  onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
-                  placeholder="e.g. IT Equipment, Office Furniture"
-                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-[#75808A]">Description</label>
-                <textarea
-                  value={catForm.description}
-                  onChange={(e) => setCatForm({ ...catForm, description: e.target.value })}
-                  placeholder="Optional category description..."
-                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A] min-h-[80px]"
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2 border-t border-[#E7ECEF] pt-4">
-              <button
-                type="button"
-                onClick={() => setShowCatModal(false)}
-                className="rounded-xl border border-[#E7ECEF] px-4 py-2 text-sm font-semibold text-[#75808A] hover:bg-[#F8FAFB]"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="rounded-xl bg-[#1F6E5A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2C8A71]"
-              >
-                Save
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* --- Employee Assignment Modal --- */}
-      {showEmpModal && editingEmp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <form
-            onSubmit={handleSaveEmp}
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-[#E7ECEF]"
-          >
-            <h3 className="text-lg font-bold text-[#203030]">Edit Employee Assignment</h3>
-            <p className="text-xs text-[#75808A] mt-1">Assign department and role for {editingEmp.name}</p>
-
-            <div className="mt-4 flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-bold text-[#75808A]">Role</label>
-                <select
-                  value={empForm.role}
-                  onChange={(e: any) => setEmpForm({ ...empForm, role: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
-                >
-                  <option value="Admin">Admin</option>
-                  <option value="Asset Manager">Asset Manager</option>
-                  <option value="Department Head">Department Head</option>
-                  <option value="Employee">Employee</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-[#75808A]">Department</label>
-                <select
-                  value={empForm.departmentId}
-                  onChange={(e) => setEmpForm({ ...empForm, departmentId: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
-                >
-                  <option value="">Not Assigned</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-[#75808A]">Status</label>
-                <select
-                  value={empForm.status}
-                  onChange={(e: any) => setEmpForm({ ...empForm, status: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2 border-t border-[#E7ECEF] pt-4">
-              <button
-                type="button"
-                onClick={() => setShowEmpModal(false)}
-                className="rounded-xl border border-[#E7ECEF] px-4 py-2 text-sm font-semibold text-[#75808A] hover:bg-[#F8FAFB]"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="rounded-xl bg-[#1F6E5A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2C8A71]"
-              >
-                Save Assignment
-              </button>
-            </div>
-          </form>
-        </div>
+      {modal.open && (
+        <DepartmentModal
+          initial={modal.editIndex === null ? null : departments[modal.editIndex]}
+          onClose={closeModal}
+          onSave={save}
+        />
       )}
     </div>
   );
