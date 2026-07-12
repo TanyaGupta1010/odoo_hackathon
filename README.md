@@ -6,7 +6,7 @@ Built with a robust role-based access model, the platform manages asset lifecycl
 
 ---
 
-## 🌟 Core Features & Modules
+## Core Features & Modules
 
 ### 1. Asset Catalog & Registry
 *   **Centralized Asset Cataloging**: Register and track corporate hardware, electronics, vehicles, and office furniture with unique auto-generated or custom asset tags.
@@ -46,7 +46,7 @@ Built with a robust role-based access model, the platform manages asset lifecycl
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 *   **Frontend**: React.js (Vite), TypeScript, TailwindCSS, Recharts, Lucide Icons, Axios.
 *   **Backend**: Node.js, Express, TypeScript, Zod (Request validation), Prisma ORM.
@@ -76,7 +76,7 @@ odoo_hackathon/
 
 ---
 
-## 🚀 Quick Local Setup
+## Quick Local Setup
 
 ### 1. Backend Setup
 1. Navigate to the backend directory:
