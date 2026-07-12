@@ -1,4 +1,4 @@
-const API = "http://localhost:5001/api";
+const API = "https://odoo-hackathon-oi06.onrender.com/api";
 
 export type AuthUser = {
   id: number;

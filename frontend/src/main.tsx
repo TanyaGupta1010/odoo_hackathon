@@ -6,7 +6,7 @@ import App from "./App";
 import { appConfig } from "./config";
 import "./styles/globals.css";
 
-const API = "http://localhost:5001/api";
+const API = "https://odoo-hackathon-oi06.onrender.com/api";
 
 async function bootstrap() {
   // Pull the Google client ID from the backend (single source of truth).

@@ -52,6 +52,9 @@ export const setCurrentUser = (user: { name: string; role?: string }) => {
   );
 };
 
+/** True when the signed-in user holds the Admin role. */
+export const isAdmin = (): boolean => getCurrentUser().role === "Admin";
+
 export const clearCurrentUser = () => {
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(TOKEN_KEY);

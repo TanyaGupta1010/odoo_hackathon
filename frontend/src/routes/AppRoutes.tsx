@@ -13,6 +13,11 @@ import Reports from "../pages/Reports";
 import Notifications from "../pages/Notifications";
 
 import MainLayout from "../layouts/MainLayout";
+import { isAdmin } from "../utils/user";
+
+/** Gate a route to Admins only; everyone else is bounced to the dashboard. */
+const AdminRoute = ({ children }: { children: JSX.Element }) =>
+  isAdmin() ? children : <Navigate to="/dashboard" replace />;
 
 const AppRoutes = () => {
   return (
@@ -26,7 +31,14 @@ const AppRoutes = () => {
 
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/organization" element={<Organization />} />
+          <Route
+            path="/organization"
+            element={
+              <AdminRoute>
+                <Organization />
+              </AdminRoute>
+            }
+          />
           <Route path="/assets" element={<Assets />} />
           <Route path="/allocation" element={<Allocation />} />
           <Route path="/booking" element={<Booking />} />
