@@ -24,6 +24,12 @@ const allocation = [
   { label: "Logistics Fleet", pct: 95 },
 ];
 
+const audits = [
+  { name: "Q3 Warehouse Audit", status: "Active" as const, stage: "Verification", done: 28, total: 40 },
+  { name: "Fleet Compliance Cycle", status: "Active" as const, stage: "In progress", done: 5, total: 60 },
+  { name: "Datacenter Audit 2026", status: "Closed" as const, stage: "Completed", done: 120, total: 120 },
+];
+
 const rings = [
   { value: 85, color: "#34D399", label: "ASSET UTILIZATION" },
   { value: 92, color: "#34D399", label: "COMPLIANCE RATING" },
@@ -96,18 +102,6 @@ const Dashboard = () => {
     viewDate.getMonth(),
     monthOffset === 0 ? todayDate : -1,
   );
-
-  const keyEvents = [
-    { title: "Quarterly Asset Audit", sub: "13:00 - Main Warehouse", solid: false, offset: 4 },
-    { title: "Procurement Webinar", sub: "11:00 - Virtual", solid: true, offset: 7 },
-  ].map((e) => {
-    const d = new Date(currentYear, today.getMonth(), todayDate + e.offset);
-    return {
-      ...e,
-      month: d.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
-      day: d.getDate(),
-    };
-  });
 
   const eventChips = [
     { title: "Quarterly Asset Audit", offset: 4 },
@@ -193,30 +187,44 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Key Events */}
+            {/* Audit */}
             <div className={cardClass}>
               <SectionHeader
-                title="Key Events"
+                title="Audit"
                 action="See more"
                 onAction={() => navigate("/audit")}
               />
-              <div className="space-y-3">
-                {keyEvents.map((e) => (
-                  <div key={e.title} className="flex items-center gap-3">
-                    <div
-                      className={`flex h-14 w-12 shrink-0 flex-col items-center justify-center rounded-lg ${
-                        e.solid ? "bg-[#1F6E5A] text-white" : "bg-[#EAF3EF] text-[#1F6E5A]"
-                      }`}
-                    >
-                      <span className="text-[9px] font-bold tracking-wide">{e.month}</span>
-                      <span className="text-lg font-bold leading-none">{e.day}</span>
+              <div className="space-y-3.5">
+                {audits.map((a) => {
+                  const pct = Math.round((a.done / a.total) * 100);
+                  const active = a.status === "Active";
+                  return (
+                    <div key={a.name}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-[#1A2B4A]">{a.name}</span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
+                            active ? "bg-[#E6F4EC] text-[#1F9D6B]" : "bg-[#EEF2F5] text-[#75808A]"
+                          }`}
+                        >
+                          {a.status}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-xs text-[#8A97A5]">
+                        <span>{a.stage}</span>
+                        <span className="font-semibold text-[#475467]">
+                          {a.done}/{a.total} verified
+                        </span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#EEF2F5]">
+                        <div
+                          className="h-full rounded-full bg-[#1F6E5A]"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#1A2B4A]">{e.title}</p>
-                      <p className="text-xs text-[#8A97A5]">{e.sub}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
