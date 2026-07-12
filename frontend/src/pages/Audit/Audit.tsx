@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { ClipboardCheck, AlertTriangle, ShieldCheck, Lock, ArrowLeft, Calendar, UserCheck } from "lucide-react";
 
-const API_BASE = "http://localhost:5000/api";
+import { api } from "../../services/http";
 
 interface AuditItem {
   id: number;
@@ -41,7 +40,7 @@ const Audit = () => {
     try {
       setLoadingCycles(true);
       setError("");
-      const res = await axios.get(`${API_BASE}/audit`);
+      const res = await api.get(`/audit`);
       if (res.data.success) {
         setCycles(res.data.data);
       }
@@ -57,7 +56,7 @@ const Audit = () => {
   const selectCycle = async (id: number) => {
     try {
       setLoadingDetails(true);
-      const res = await axios.get(`${API_BASE}/audit/${id}`);
+      const res = await api.get(`/audit/${id}`);
       if (res.data.success) {
         setSelectedCycle(res.data.data);
       }
@@ -77,7 +76,7 @@ const Audit = () => {
     if (!selectedCycle || selectedCycle.status === "Closed") return;
 
     try {
-      const res = await axios.patch(`${API_BASE}/audit/items/${itemId}`, {
+      const res = await api.patch(`/audit/items/${itemId}`, {
         status: verificationStatus,
       });
 
@@ -114,7 +113,7 @@ const Audit = () => {
 
   const handleSaveNotes = async (itemId: number, status: AuditItem["status"], notes: string) => {
     try {
-      await axios.patch(`${API_BASE}/audit/items/${itemId}`, {
+      await api.patch(`/audit/items/${itemId}`, {
         status,
         notes,
       });
@@ -126,7 +125,7 @@ const Audit = () => {
   const handleCloseCycle = async () => {
     if (!selectedCycle) return;
     try {
-      const res = await axios.post(`${API_BASE}/audit/cycles/${selectedCycle.id}/close`);
+      const res = await api.post(`/audit/cycles/${selectedCycle.id}/close`);
       if (res.data.success) {
         setShowCloseConfirmation(false);
         // Refresh detail views

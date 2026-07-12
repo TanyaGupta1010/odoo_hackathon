@@ -7,6 +7,7 @@ router.get("/", AllocationController.getAll);
 
 router.get("/history/:assetId", AllocationController.getHistory);
 
+// TODO: restrict writes to admins later (requireRole("Admin"))
 router.post("/", AllocationController.allocate);
 
 router.patch("/:id/return", AllocationController.returnAsset);

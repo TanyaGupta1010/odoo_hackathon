@@ -52,4 +52,13 @@ export const setCurrentUser = (user: { name: string; role?: string }) => {
   );
 };
 
-export const clearCurrentUser = () => localStorage.removeItem(STORAGE_KEY);
+export const clearCurrentUser = () => {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+};
+
+const TOKEN_KEY = "assetflow_token";
+
+export const setToken = (token: string) => localStorage.setItem(TOKEN_KEY, token);
+
+export const getToken = () => localStorage.getItem(TOKEN_KEY);

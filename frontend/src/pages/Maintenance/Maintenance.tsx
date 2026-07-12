@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { Plus, Wrench, Clock, CheckCircle2, AlertTriangle, User, Play, Check } from "lucide-react";
 
-const API_BASE = "http://localhost:5000/api";
+import { api } from "../../services/http";
 
 interface Asset {
   id: number;
@@ -73,9 +72,9 @@ const Maintenance = () => {
       setLoading(true);
       setError("");
       const [maintenanceRes, assetsRes, employeesRes] = await Promise.all([
-        axios.get(`${API_BASE}/maintenance`),
-        axios.get(`${API_BASE}/assets`),
-        axios.get(`${API_BASE}/employees`),
+        api.get(`/maintenance`),
+        api.get(`/assets`),
+        api.get(`/employees`),
       ]);
 
       if (maintenanceRes.data.success) {
@@ -103,7 +102,7 @@ const Maintenance = () => {
   // Update request status or technician
   const handleUpdateReq = async (id: number, updates: Partial<MaintenanceRequest>) => {
     try {
-      const res = await axios.patch(`${API_BASE}/maintenance/${id}`, updates);
+      const res = await api.patch(`/maintenance/${id}`, updates);
       if (res.data.success) {
         // Refresh requests board
         await fetchData();
@@ -124,7 +123,7 @@ const Maintenance = () => {
     if (!selectedAssetId || !newDescription) return;
 
     try {
-      const res = await axios.post(`${API_BASE}/maintenance`, {
+      const res = await api.post(`/maintenance`, {
         assetId: Number(selectedAssetId),
         issueDescription: newDescription,
         priority: newPriority,

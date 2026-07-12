@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { AuditService } from "../services/audit.service";
 import { updateAuditItemSchema } from "../validators/audit.validator";
+import { AuthRequest } from "../middleware/auth.middleware";
 
 export class AuditController {
   static async getActiveCycle(req: Request, res: Response) {
@@ -26,12 +27,12 @@ export class AuditController {
       data: cycle,
     });
   }
-  static async updateItem(req: Request, res: Response) {
+  static async updateItem(req: AuthRequest, res: Response) {
     const id = Number(req.params.id);
     const body = updateAuditItemSchema.parse(req.body);
-    // Optional auditorId can be fetched from auth context, default to query/body or undefined
-    const auditorId = req.body.auditorId ? Number(req.body.auditorId) : undefined;
-    
+    // Derive the auditor from the authenticated JWT — never trust a client-supplied id.
+    const auditorId = req.user?.id;
+
     const item = await AuditService.updateItem(id, body, auditorId);
     res.json({
       success: true,

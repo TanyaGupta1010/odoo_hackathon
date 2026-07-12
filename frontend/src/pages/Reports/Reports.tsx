@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { Download, AlertTriangle } from "lucide-react";
 
-const API_BASE = "http://localhost:5000/api";
+import { api } from "../../services/http";
 
 interface DepartmentUtilization {
   name: string;
@@ -53,7 +52,7 @@ const Reports = () => {
     try {
       setLoading(true);
       setError("");
-      const res = await axios.get(`${API_BASE}/reports/summary`);
+      const res = await api.get(`/reports/summary`);
       if (res.data.success) {
         setData(res.data.data);
       }

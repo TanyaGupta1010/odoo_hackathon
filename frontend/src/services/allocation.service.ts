@@ -1,69 +1,40 @@
-const API = "http://localhost:5000/api";
+import { apiFetch } from "./http";
 
 export const allocationService = {
-  async getAll() {
-    const res = await fetch(`${API}/allocations`);
-    return res.json();
+  getAll() {
+    return apiFetch("/allocations");
   },
 
-  async create(data: {
+  create(data: {
     assetId: number;
     employeeId: number;
     expectedReturnDate?: string;
     departmentId?: number;
   }) {
-    const res = await fetch(`${API}/allocations`, {
+    return apiFetch("/allocations", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(data),
     });
-
-    return res.json();
   },
 
-  async getHistory(assetId: number) {
-    const res = await fetch(
-      `${API}/allocations/history/${assetId}`
-    );
-
-    return res.json();
+  getHistory(assetId: number) {
+    return apiFetch(`/allocations/history/${assetId}`);
   },
 
-  async returnAsset(
-    id: number,
-    condition = "Good",
-    notes = ""
-  ) {
-    const res = await fetch(
-      `${API}/allocations/${id}/return`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          condition,
-          notes,
-        }),
-      }
-    );
-
-    return res.json();
+  returnAsset(id: number, condition = "Good", notes = "") {
+    return apiFetch(`/allocations/${id}/return`, {
+      method: "PATCH",
+      body: JSON.stringify({ condition, notes }),
+    });
   },
 
   async getAssets() {
-    const res = await fetch(`${API}/assets`);
-    const data = await res.json();
-
+    const data = await apiFetch("/assets");
     return data.data ?? [];
   },
 
   async getEmployees() {
-    const res = await fetch(`${API}/employees`);
-    const data = await res.json();
-
+    const data = await apiFetch("/employees");
     return data.data ?? [];
   },
 };

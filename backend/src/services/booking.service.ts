@@ -2,7 +2,7 @@ import { prisma } from "../config/prisma";
 import { CreateBookingInput } from "../validators/booking.validator";
 
 export class BookingService {
-  static async create(data: CreateBookingInput) {
+  static async create(data: CreateBookingInput & { employeeId: number }) {
     const resource = await prisma.asset.findUnique({
       where: {
         id: data.resourceId,

@@ -10,7 +10,11 @@ import {
   Mail,
   ArrowRight,
 } from "lucide-react";
-import { setCurrentUser } from "../../utils/user";
+import { setCurrentUser, setToken } from "../../utils/user";
+import { authService } from "../../services/auth.service";
+import { isGoogleEnabled } from "../../config";
+import GoogleButton from "../Login/GoogleButton";
+import GoogleLoginButton from "../Login/GoogleLoginButton";
 
 const features = [
   {
@@ -29,14 +33,38 @@ const avatars = ["#3B5C4A", "#4A6FA5", "#8A5A44", "#5A5A6E"];
 
 const Signup = () => {
   const navigate = useNavigate();
-  const [agreed, setAgreed] = useState(false);
+  const googleEnabled = isGoogleEnabled();
   const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!agreed) return;
-    if (fullName.trim()) setCurrentUser({ name: fullName });
+  const applyAuth = (res: Awaited<ReturnType<typeof authService.signup>>) => {
+    if (!res.success || !res.data) {
+      setError(res.message || "Sign up failed");
+      return;
+    }
+    setToken(res.data.token);
+    setCurrentUser({ name: res.data.user.name, role: res.data.user.role });
     navigate("/dashboard");
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const res = await authService.signup({ name: fullName, email, password });
+    setLoading(false);
+    applyAuth(res);
+  };
+
+  const handleGoogleToken = async (accessToken: string) => {
+    setError("");
+    setLoading(true);
+    const res = await authService.google(accessToken);
+    setLoading(false);
+    applyAuth(res);
   };
 
   return (
@@ -143,6 +171,8 @@ const Signup = () => {
                 <input
                   type="email"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="j.sterling@enterprise.com"
                   className="w-full rounded-lg border border-[#E1E6EA] bg-[#F7F9FA] py-2.5 pl-10 pr-3.5 text-sm text-[#203030] transition placeholder:text-[#9AA5AF] focus:border-[#1F6E5A] focus:bg-white focus:ring-2 focus:ring-[#1F6E5A]/15"
                 />
@@ -157,6 +187,8 @@ const Signup = () => {
                 type="password"
                 required
                 minLength={12}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
                 className="w-full rounded-lg border border-[#E1E6EA] bg-[#F7F9FA] px-3.5 py-2.5 text-sm text-[#203030] transition placeholder:text-[#9AA5AF] focus:border-[#1F6E5A] focus:bg-white focus:ring-2 focus:ring-[#1F6E5A]/15"
               />
@@ -165,38 +197,44 @@ const Signup = () => {
               </p>
             </div>
 
-            <label className="flex items-start gap-2.5 pt-1 text-xs text-[#6B7683]">
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => setAgreed(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-[#D5DBE0] accent-[#1F6E5A]"
-              />
-              <span className="tracking-wide">
-                I AGREE TO THE{" "}
-                <a href="#" className="font-semibold text-[#1F6E5A] underline">
-                  TERMS OF SERVICE
-                </a>{" "}
-                AND{" "}
-                <a href="#" className="font-semibold text-[#1F6E5A] underline">
-                  DATA PRIVACY POLICY
-                </a>
-              </span>
-            </label>
+            {error && (
+              <p className="rounded-lg bg-[#FDECEC] px-3 py-2 text-xs font-medium text-[#D64545]">
+                {error}
+              </p>
+            )}
 
             <button
               type="submit"
-              disabled={!agreed}
+              disabled={loading}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#1F6E5A] py-3 text-sm font-semibold tracking-wide text-white transition hover:bg-[#195C4B] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              CREATE ACCOUNT
-              <ArrowRight size={16} />
+              {loading ? "CREATING…" : "CREATE ACCOUNT"}
+              {!loading && <ArrowRight size={16} />}
             </button>
           </form>
 
-          <div className="my-6 h-px bg-[#E7ECEF]" />
+          <div className="my-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-[#E7ECEF]" />
+            <span className="text-[10px] font-semibold tracking-[0.15em] text-[#9AA5AF]">
+              OR CONTINUE WITH
+            </span>
+            <span className="h-px flex-1 bg-[#E7ECEF]" />
+          </div>
 
-          <p className="text-center text-xs text-[#6B7683]">
+          {googleEnabled ? (
+            <GoogleLoginButton
+              onToken={handleGoogleToken}
+              onError={setError}
+              disabled={loading}
+            />
+          ) : (
+            <GoogleButton
+              disabled={loading}
+              onClick={() => setError("Google sign-in isn’t configured yet.")}
+            />
+          )}
+
+          <p className="mt-6 text-center text-xs text-[#6B7683]">
             Already have an account?{" "}
             <Link
               to="/login"

@@ -1,5 +1,3 @@
-import type { ButtonHTMLAttributes } from "react";
-
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
     <path
@@ -21,11 +19,18 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const GoogleButton = (props: ButtonHTMLAttributes<HTMLButtonElement>) => (
+type GoogleButtonProps = {
+  onClick: () => void;
+  disabled?: boolean;
+};
+
+/** Presentational Google button — no OAuth logic (safe to render without the provider). */
+const GoogleButton = ({ onClick, disabled }: GoogleButtonProps) => (
   <button
     type="button"
-    {...props}
-    className="flex w-full items-center justify-center gap-3 rounded-lg border border-[#E7ECEF] bg-white px-4 py-3 text-sm font-medium text-[#22324A] transition hover:bg-[#F5F7F9]"
+    disabled={disabled}
+    onClick={onClick}
+    className="flex w-full items-center justify-center gap-3 rounded-lg border border-[#E7ECEF] bg-white px-4 py-3 text-sm font-medium text-[#22324A] transition hover:bg-[#F5F7F9] disabled:cursor-not-allowed disabled:opacity-60"
   >
     <GoogleIcon />
     Continue with Google
