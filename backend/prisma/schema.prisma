@@ -97,38 +97,60 @@ model Asset {
 
 // 5. Asset Allocations & Transfers (Screen 5)
 model Allocation {
-  id                 Int        @id @default(autoincrement())
-  assetId            Int        @map("asset_id")
-  employeeId         Int?       @map("employee_id")
-  departmentId       Int?       @map("department_id")
-  allocatedAt        DateTime   @default(now()) @map("allocated_at")
-  expectedReturnDate DateTime?  @map("expected_return_date")
-  returnedAt         DateTime?  @map("returned_at")
-  returnCondition    String?    @map("return_condition")
-  checkinNotes       String?    @map("checkin_notes")
+  id                 Int         @id @default(autoincrement())
+  assetId            Int         @map("asset_id")
+  employeeId         Int?        @map("employee_id")
+  departmentId       Int?        @map("department_id")
 
-  asset              Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  employee           Employee?  @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  allocatedAt        DateTime    @default(now()) @map("allocated_at")
+  expectedReturnDate DateTime?   @map("expected_return_date")
+
+  returnedAt         DateTime?   @map("returned_at")
+  returnCondition    String?     @map("return_condition")
+  checkinNotes       String?     @map("checkin_notes")
+
+  isActive           Boolean     @default(true) @map("is_active")
+
+  asset              Asset       @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  employee           Employee?   @relation(fields: [employeeId], references: [id], onDelete: SetNull)
   department         Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@index([assetId])
+  @@index([employeeId])
+  @@index([departmentId])
 
   @@map("allocations")
 }
 
 model TransferRequest {
   id             Int       @id @default(autoincrement())
+
   assetId        Int       @map("asset_id")
+
   fromEmployeeId Int       @map("from_employee_id")
+
   toEmployeeId   Int       @map("to_employee_id")
+
   reason         String?
-  status         String    @default("Pending") // "Pending", "Approved", "Rejected"
+
+  status         String    @default("Pending")
+
   approvedById   Int?      @map("approved_by_id")
+
   createdAt      DateTime  @default(now()) @map("created_at")
+
   updatedAt      DateTime? @updatedAt @map("updated_at")
 
   asset          Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
   fromEmployee   Employee  @relation("FromEmployee", fields: [fromEmployeeId], references: [id])
+
   toEmployee     Employee  @relation("ToEmployee", fields: [toEmployeeId], references: [id])
+
   approver       Employee? @relation("Approver", fields: [approvedById], references: [id])
+
+  @@index([assetId])
+  @@index([status])
 
   @@map("transfer_requests")
 }
@@ -136,15 +158,26 @@ model TransferRequest {
 // 6. Resource Bookings (Screen 6)
 model Booking {
   id         Int      @id @default(autoincrement())
-  resourceId Int      @map("resource_id") // shared assets are bookable resources
+
+  resourceId Int      @map("resource_id")
+
   employeeId Int      @map("employee_id")
+
   startTime  DateTime @map("start_time")
+
   endTime    DateTime @map("end_time")
-  status     String   @default("Upcoming") // "Upcoming", "Ongoing", "Completed", "Cancelled"
+
+  status     String   @default("Upcoming")
+
   createdAt  DateTime @default(now()) @map("created_at")
 
   resource   Asset    @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId])
+  @@index([startTime])
+  @@index([endTime])
 
   @@map("bookings")
 }
