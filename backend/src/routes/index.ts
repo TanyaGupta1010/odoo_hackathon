@@ -7,6 +7,7 @@ import transferRoutes from "./transfer.routes";
 import maintenanceRoutes from "./maintenance.routes";
 import auditRoutes from "./audit.routes";
 import reportsRoutes from "./reports.routes";
+import notificationsRoutes from "./notifications.routes";
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use("/transfers", transferRoutes);
 router.use("/maintenance", maintenanceRoutes);
 router.use("/audit", auditRoutes);
 router.use("/reports", reportsRoutes);
+router.use("/notifications", notificationsRoutes);
 
 export default router;
