@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Info,
   Pencil,
@@ -7,7 +8,6 @@ import {
   Plus,
   ArrowRight,
   X,
-  Network,
   ClipboardList,
   ShieldCheck,
 } from "lucide-react";
@@ -26,21 +26,17 @@ type Tab = (typeof tabs)[number];
 
 const tools = [
   {
-    icon: Network,
-    title: "Hierarchical View",
-    body: "Visualize your department structure in an organizational tree map.",
-    arrow: false,
-  },
-  {
     icon: ClipboardList,
     title: "Audit Logs",
     body: "Review history of changes made to organization units and heads.",
+    to: "/notifications",
     arrow: false,
   },
   {
     icon: ShieldCheck,
     title: "Policy Mapping",
     body: "Assign procurement and allocation policies to specific departments.",
+    to: "/allocation",
     arrow: true,
   },
 ];
@@ -130,6 +126,7 @@ const DepartmentModal = ({
 };
 
 const Organization = () => {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("Departments");
   const [departments, setDepartments] = useState<Department[]>(initialDepartments);
   const [modal, setModal] = useState<{ open: boolean; editIndex: number | null }>({
@@ -268,11 +265,11 @@ const Organization = () => {
       )}
 
       {/* Tool cards */}
-      <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
         {tools.map((t) => (
           <button
             key={t.title}
-            onClick={() => alert(`${t.title} — coming soon`)}
+            onClick={() => navigate(t.to)}
             className="relative rounded-2xl border border-[#EAEEF2] bg-white p-5 text-left transition hover:border-[#1F6E5A]/40 hover:shadow-sm"
           >
             {t.arrow && <ArrowRight size={16} className="absolute right-5 top-5 text-[#8A97A5]" />}
