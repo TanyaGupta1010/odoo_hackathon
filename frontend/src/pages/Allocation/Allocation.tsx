@@ -63,13 +63,18 @@ export default function Allocation() {
   }, []);
 
   async function handleReturn(id: number) {
-    try {
-      await allocationService.returnAsset(id);
-      loadAllocations();
-    } catch (err) {
-      console.error(err);
-    }
+  try {
+    await allocationService.returnAsset(
+      id,
+      "Good",
+      "Returned from frontend"
+    );
+
+    await loadAllocations();
+  } catch (err) {
+    console.error(err);
   }
+}
 
   async function handleApprove(id: number) {
     try {
