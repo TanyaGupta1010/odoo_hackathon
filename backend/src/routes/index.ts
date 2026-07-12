@@ -1,12 +1,18 @@
 import { Router } from "express";
 
+import allocationRoutes from "./allocation.routes";
+import assetRoutes from "./asset.routes";
+
 const router = Router();
 
-router.get("/", (req, res) => {
-  res.status(200).json({
+router.get("/", (_, res) => {
+  res.json({
     success: true,
-    message: "Welcome to AssetFlow API",
+    message: "AssetFlow API v1",
   });
 });
+
+router.use("/assets", assetRoutes);
+router.use("/allocations", allocationRoutes);
 
 export default router;
