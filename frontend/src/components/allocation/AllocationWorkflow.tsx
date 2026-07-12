@@ -6,6 +6,8 @@ import AllocationForm from "./AllocationForm";
 import TransferRequestForm from "./TransferRequestForm";
 import AllocationHistory from "./AllocationHistory";
 
+import AllocationLanding from "./landing/AllocationLanding";
+
 import { allocationService } from "../../services/allocation.service";
 
 import type {
@@ -24,12 +26,17 @@ export default function AllocationWorkflow() {
     useState(false);
 
   useEffect(() => {
-    if (!selectedAsset) return;
+    if (!selectedAsset) {
+      setActiveAllocation(null);
+      return;
+    }
 
     checkAllocation();
   }, [selectedAsset]);
 
   async function checkAllocation() {
+    if (!selectedAsset) return;
+
     try {
       setLoading(true);
 
@@ -40,7 +47,7 @@ export default function AllocationWorkflow() {
         (res.data ?? []).find(
           (allocation: Allocation) =>
             allocation.asset.id ===
-              selectedAsset?.id &&
+              selectedAsset.id &&
             !allocation.returnedAt
         ) ?? null;
 
@@ -53,11 +60,15 @@ export default function AllocationWorkflow() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <AssetSelector
         value={selectedAsset?.id ?? null}
         onChange={setSelectedAsset}
       />
+
+      {!selectedAsset && (
+        <AllocationLanding />
+      )}
 
       {loading && (
         <div className="rounded-xl border bg-white p-8 text-center">
