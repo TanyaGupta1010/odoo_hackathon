@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,6 +11,9 @@ import {
   ClipboardList,
   ShieldCheck,
 } from "lucide-react";
+
+import { employeeService } from "../../services/employee.service";
+import type { Employee } from "../../services/employee.service";
 
 type Status = "Active" | "Inactive";
 type Department = { name: string; head: string; parent: string; status: Status };
@@ -125,6 +128,111 @@ const DepartmentModal = ({
   );
 };
 
+const EmployeeTab = () => {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    setError("");
+    const res = await employeeService.list();
+    setLoading(false);
+    if (!res.success || !res.data) {
+      setError(res.message || "Could not load employees.");
+      return;
+    }
+    setEmployees(res.data);
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const setRole = async (emp: Employee, role: string) => {
+    setBusyId(emp.id);
+    setError("");
+    const res = await employeeService.updateRole(emp.id, role);
+    setBusyId(null);
+    if (!res.success || !res.data) {
+      setError(res.message || "Could not update role.");
+      return;
+    }
+    setEmployees((list) => list.map((e) => (e.id === emp.id ? res.data! : e)));
+  };
+
+  if (loading) {
+    return (
+      <div className="mt-5 rounded-2xl border border-[#EAEEF2] bg-white p-12 text-center text-sm text-[#8A97A5]">
+        Loading employees…
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5 rounded-2xl border border-[#EAEEF2] bg-white">
+      {error && (
+        <p className="m-4 rounded-lg bg-[#FDECEC] px-3 py-2 text-xs font-medium text-[#D64545]">
+          {error}
+        </p>
+      )}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] text-left">
+          <thead>
+            <tr className="border-b border-[#EAEEF2] text-[11px] font-semibold tracking-wide text-[#8A97A5]">
+              <th className="px-5 py-3">NAME</th>
+              <th className="px-5 py-3">EMAIL</th>
+              <th className="px-5 py-3">ROLE</th>
+              <th className="px-5 py-3 text-right">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {employees.map((e) => {
+              const admin = e.role === "Admin";
+              return (
+                <tr key={e.id} className="border-b border-[#EEF1F4] text-sm last:border-0">
+                  <td className="px-5 py-4 font-semibold text-[#1A2B4A]">{e.name}</td>
+                  <td className="px-5 py-4 text-[#475467]">{e.email}</td>
+                  <td className="px-5 py-4">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                        admin
+                          ? "bg-[#E6F4EC] text-[#1F9D6B]"
+                          : "bg-[#EEF2F5] text-[#75808A]"
+                      }`}
+                    >
+                      {admin && <ShieldCheck size={11} />}
+                      {e.role}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 text-right">
+                    <button
+                      onClick={() => setRole(e, admin ? "Employee" : "Admin")}
+                      disabled={busyId === e.id}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
+                        admin
+                          ? "border border-[#E1E6EA] text-[#475467] hover:border-[#D64545] hover:text-[#D64545]"
+                          : "bg-[#1F6E5A] text-white hover:bg-[#195C4B]"
+                      }`}
+                    >
+                      {busyId === e.id
+                        ? "Saving…"
+                        : admin
+                          ? "Revoke Admin"
+                          : "Make Admin"}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 const Organization = () => {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("Departments");
@@ -166,12 +274,14 @@ const Organization = () => {
             </button>
           ))}
         </div>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-2 rounded-lg bg-[#1F6E5A] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#195C4B]"
-        >
-          <Plus size={16} /> Add {tab === "Departments" ? "Department" : tab.replace(/s$/, "")}
-        </button>
+        {tab !== "Employee" && (
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 rounded-lg bg-[#1F6E5A] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#195C4B]"
+          >
+            <Plus size={16} /> Add {tab === "Departments" ? "Department" : tab.replace(/s$/, "")}
+          </button>
+        )}
       </div>
 
       {/* Info banner */}
@@ -258,6 +368,8 @@ const Organization = () => {
             </div>
           </div>
         </div>
+      ) : tab === "Employee" ? (
+        <EmployeeTab />
       ) : (
         <div className="mt-5 rounded-2xl border border-[#EAEEF2] bg-white p-12 text-center text-sm text-[#8A97A5]">
           No {tab.toLowerCase()} configured yet. Use “Add {tab.replace(/s$/, "")}” to create one.

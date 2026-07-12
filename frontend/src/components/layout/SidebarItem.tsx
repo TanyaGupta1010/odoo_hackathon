@@ -4,6 +4,7 @@ type SidebarItemProps = {
   title: string;
   icon: React.ElementType;
   path: string;
+  adminOnly?: boolean;
 };
 
 const SidebarItem = ({ title, icon: Icon, path }: SidebarItemProps) => {

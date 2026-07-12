@@ -1,7 +1,11 @@
 import SidebarItem from "./SidebarItem";
 import { sidebarItems } from "../../constants/sidebar";
+import { isAdmin } from "../../utils/user";
 
 const Sidebar = () => {
+  const admin = isAdmin();
+  const items = sidebarItems.filter((item) => !item.adminOnly || admin);
+
   return (
     <aside className="flex h-screen w-[260px] flex-col border-r border-[#E6EAEE] bg-white">
       {/* Logo */}
@@ -13,7 +17,7 @@ const Sidebar = () => {
 
       {/* Menu (scrolls if it can't all fit) */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-2">
-        {sidebarItems.map((item) => (
+        {items.map((item) => (
           <SidebarItem key={item.title} {...item} />
         ))}
       </nav>
