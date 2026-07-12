@@ -5,6 +5,7 @@ import { Landmark } from "lucide-react";
 
 import city from "../../assets/city.jpg";
 import GoogleButton from "./GoogleButton";
+import { nameFromEmail, setCurrentUser } from "../../utils/user";
 
 const stats = [
   { value: "1.2B", label: "Assets Tracked" },
@@ -17,9 +18,12 @@ const avatars = ["#3B5C4A", "#4A6FA5", "#8A5A44", "#5A5A6E"];
 const Login = () => {
   const navigate = useNavigate();
   const [remember, setRemember] = useState(false);
+  const [email, setEmail] = useState("");
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    const name = nameFromEmail(email);
+    if (name) setCurrentUser({ name });
     navigate("/dashboard");
   };
 
@@ -55,6 +59,8 @@ const Login = () => {
               <input
                 type="email"
                 required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@company.com"
                 className="w-full rounded-lg border border-[#E1E6EA] bg-[#F7F9FA] px-3.5 py-2.5 text-sm text-[#203030] transition placeholder:text-[#9AA5AF] focus:border-[#1F6E5A] focus:bg-white focus:ring-2 focus:ring-[#1F6E5A]/15"
               />

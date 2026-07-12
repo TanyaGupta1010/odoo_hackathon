@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  Building2,
   Package,
   ArrowRightLeft,
   CalendarDays,
@@ -16,12 +17,17 @@ export const sidebarItems = [
     path: "/dashboard",
   },
   {
+    title: "Organization Setup",
+    icon: Building2,
+    path: "/organization",
+  },
+  {
     title: "Assets",
     icon: Package,
     path: "/assets",
   },
   {
-    title: "Allocation",
+    title: "Allocation & Transfer",
     icon: ArrowRightLeft,
     path: "/allocation",
   },

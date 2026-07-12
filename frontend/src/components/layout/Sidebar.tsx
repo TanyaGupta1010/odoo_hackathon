@@ -1,53 +1,49 @@
-import { NavLink } from "react-router-dom";
+import { LogOut } from "lucide-react";
+import SidebarItem from "./SidebarItem";
+import { sidebarItems } from "../../constants/sidebar";
+import { getCurrentUser } from "../../utils/user";
 
-const menu = [
-  { name: "Dashboard", path: "/dashboard" },
-  { name: "Organization Setup", path: "/organization" },
-  { name: "Assets", path: "/assets" },
-  { name: "Allocation & Transfer", path: "/allocation" },
-  { name: "Resource Booking", path: "/booking" },
-  { name: "Maintenance", path: "/maintenance" },
-  { name: "Audit", path: "/audit" },
-  { name: "Reports", path: "/reports" },
-  { name: "Notifications", path: "/notifications" },
-];
+const Sidebar = () => {
+  const user = getCurrentUser();
 
-export default function Sidebar() {
   return (
-    <aside className="w-48 bg-white border-r border-[#E7ECEF] flex flex-col">
-
-      <div className="px-4 py-4 border-b border-[#E7ECEF]">
-        <h1 className="font-bold text-lg text-[#203030]">
+    <aside className="flex h-screen w-[260px] flex-col border-r border-[#E6EAEE] bg-white">
+      {/* Logo */}
+      <div className="px-8 pt-8 pb-6">
+        <h1 className="text-4xl font-extrabold tracking-tight text-[#1F6E5A]">
           AssetFlow
         </h1>
       </div>
 
-      <nav className="flex flex-col gap-1 p-3">
+      {/* Profile */}
+      <div className="flex flex-col items-center px-6">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#DDE5E8] text-3xl font-bold text-[#5E6C74]">
+          {user.initials}
+        </div>
 
-        {menu.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.path}
-            className={({ isActive }) =>
-              `
-              px-3
-              py-2
-              text-sm
-              rounded
-              transition
-              ${
-                isActive
-                  ? "border border-[#1F6E5A] text-[#1F6E5A] bg-[#F7FCFA]"
-                  : "text-[#303030] hover:bg-gray-50"
-              }
-            `
-            }
-          >
-            {item.name}
-          </NavLink>
+        <h2 className="mt-5 text-[22px] font-semibold text-[#203030]">
+          {user.name}
+        </h2>
+
+        <p className="mt-1 text-base text-[#667085]">{user.role}</p>
+      </div>
+
+      {/* Menu */}
+      <nav className="mt-8 flex flex-1 flex-col gap-2 px-4">
+        {sidebarItems.map((item) => (
+          <SidebarItem key={item.title} {...item} />
         ))}
-
       </nav>
+
+      {/* Logout */}
+      <div className="border-t border-[#E6EAEE] p-4">
+        <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-[#475467] transition hover:bg-[#F5F7F9]">
+          <LogOut size={20} />
+          Logout
+        </button>
+      </div>
     </aside>
   );
-}
+};
+
+export default Sidebar;
