@@ -5,6 +5,8 @@ const router = Router();
 
 router.get("/", AssetController.getAll);
 
+router.get("/available", AssetController.getAvailable);
+
 router.post("/", AssetController.create);
 
 export default router;

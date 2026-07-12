@@ -109,7 +109,6 @@ model Allocation {
   returnCondition    String?     @map("return_condition")
   checkinNotes       String?     @map("checkin_notes")
 
-  isActive           Boolean     @default(true) @map("is_active")
 
   asset              Asset       @relation(fields: [assetId], references: [id], onDelete: Cascade)
   employee           Employee?   @relation(fields: [employeeId], references: [id], onDelete: SetNull)

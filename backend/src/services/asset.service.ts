@@ -41,4 +41,22 @@ export class AssetService {
       },
     });
   }
+
+  static async getAvailableAssets() {
+    return prisma.asset.findMany({
+      where: {
+        status: "Available",
+      },
+      select: {
+        id: true,
+        assetTag: true,
+        name: true,
+        condition: true,
+        location: true,
+      },
+      orderBy: {
+        assetTag: "asc",
+      },
+    });
+  }
 }
