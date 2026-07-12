@@ -7,7 +7,6 @@ import {
   Wrench,
   ClipboardCheck,
   BarChart3,
-  Bell,
 } from "lucide-react";
 
 export const sidebarItems = [

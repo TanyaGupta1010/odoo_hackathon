@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Search, Settings, LogOut, User } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Bell, Search, Settings, LogOut } from "lucide-react";
 import { getCurrentUser, clearCurrentUser } from "../../utils/user";
 
 const Header = () => {

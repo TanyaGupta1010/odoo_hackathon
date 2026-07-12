@@ -1,5 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { ClipboardCheck, AlertTriangle, ShieldCheck, Lock, ArrowLeft, Calendar, UserCheck } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  ClipboardCheck,
+  AlertTriangle,
+  Lock,
+  ArrowLeft,
+} from "lucide-react";
 
 import { api } from "../../services/http";
 
@@ -262,7 +267,7 @@ const Audit = () => {
                 {/* Progress calculation */}
                 {(() => {
                   const totalItems = selectedCycle.auditItems.length;
-                  const verifiedCount = selectedCycle.auditItems.filter((i) => i.status === "Verified").length;
+                  // const verifiedCount = selectedCycle.auditItems.filter((i) => i.status === "Verified").length;
                   const missingCount = selectedCycle.auditItems.filter((i) => i.status === "Missing").length;
                   const damagedCount = selectedCycle.auditItems.filter((i) => i.status === "Damaged").length;
                   const pendingCount = selectedCycle.auditItems.filter((i) => i.status === "Pending").length;

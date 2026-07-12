@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Bell, AlertCircle, CheckCircle, Calendar, ArrowRightLeft } from "lucide-react";
 
 import { api } from "../../services/http";

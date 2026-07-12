@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Wrench, Clock, CheckCircle2, AlertTriangle, User, Play, Check } from "lucide-react";
+import {
+  Plus,
+  Clock,
+  CheckCircle2,
+  User,
+  Play,
+  Check,
+} from "lucide-react";
 
 import { api } from "../../services/http";
 

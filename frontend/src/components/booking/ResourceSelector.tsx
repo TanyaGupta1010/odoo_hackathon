@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { bookingService } from "../../services/booking.service";
+import type { Resource } from "../../types/booking";
 
-interface Resource {
-  id: number;
-  name: string;
-}
 
 interface Props {
   value: number | null;
