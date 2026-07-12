@@ -1,9 +1,9 @@
-const Booking = () => {
+import BookingWorkflow from "../../components/booking/BookingWorkflow";
+
+export default function Booking() {
   return (
-    <div>
-      <h1>Booking</h1>
+    <div className="space-y-8">
+      <BookingWorkflow />
     </div>
   );
-};
-
-export default Booking;
+}
