@@ -35,6 +35,8 @@ const AppRoutes = () => {
           <Route path="/reports" element={<Reports />} />
           <Route path="/notifications" element={<Notifications />} />
         </Route>
+
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );
