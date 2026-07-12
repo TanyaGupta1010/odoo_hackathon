@@ -8,7 +8,7 @@ export class AssetController {
 
     const asset = await AssetService.create(body);
 
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
       data: asset,
     });
@@ -17,7 +17,16 @@ export class AssetController {
   static async getAll(req: Request, res: Response) {
     const assets = await AssetService.getAll();
 
-    return res.json({
+    res.json({
+      success: true,
+      data: assets,
+    });
+  }
+
+  static async getAvailable(req: Request, res: Response) {
+    const assets = await AssetService.getAvailableAssets();
+
+    res.json({
       success: true,
       data: assets,
     });

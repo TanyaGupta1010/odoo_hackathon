@@ -15,7 +15,20 @@ export class AllocationService {
 
     if (asset.status !== "Available") {
       throw new Error(
-        `Asset is currently ${asset.status} and cannot be allocated`
+        `Asset ${asset.assetTag} is currently ${asset.status}`
+      );
+    }
+
+    const activeAllocation = await prisma.allocation.findFirst({
+      where: {
+        assetId: data.assetId,
+        returnedAt: null,
+      },
+    });
+
+    if (activeAllocation) {
+      throw new Error(
+        "Asset is already allocated. Create a transfer request instead."
       );
     }
 
@@ -54,6 +67,65 @@ export class AllocationService {
       orderBy: {
         allocatedAt: "desc",
       },
+    });
+  }
+
+  static async getHistory(assetId: number) {
+    return prisma.allocation.findMany({
+      where: {
+        assetId,
+      },
+      include: {
+        employee: true,
+        department: true,
+      },
+      orderBy: {
+        allocatedAt: "desc",
+      },
+    });
+  }
+
+  static async returnAsset(
+    allocationId: number,
+    condition: string,
+    notes: string
+  ) {
+    const allocation = await prisma.allocation.findUnique({
+      where: {
+        id: allocationId,
+      },
+    });
+
+    if (!allocation) {
+      throw new Error("Allocation not found");
+    }
+
+    if (allocation.returnedAt) {
+      throw new Error("Asset already returned");
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.allocation.update({
+        where: {
+          id: allocationId,
+        },
+        data: {
+          returnedAt: new Date(),
+          returnCondition: condition,
+          checkinNotes: notes,
+        },
+      });
+
+      await tx.asset.update({
+        where: {
+          id: allocation.assetId,
+        },
+        data: {
+          status: "Available",
+        },
+      });
+
+      return updated;
     });
   }
 }
