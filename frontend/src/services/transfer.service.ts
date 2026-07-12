@@ -23,18 +23,42 @@ export const transferService = {
     return res.json();
   },
 
-  async approve(id: number) {
-    const res = await fetch(`${API}/transfers/${id}/approve`, {
-      method: "PUT",
-    });
+  async approve(
+    id: number,
+    approverId: number = 1
+  ) {
+    const res = await fetch(
+      `${API}/transfers/${id}/approve`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          approverId,
+        }),
+      }
+    );
 
     return res.json();
   },
 
-  async reject(id: number) {
-    const res = await fetch(`${API}/transfers/${id}/reject`, {
-      method: "PUT",
-    });
+  async reject(
+    id: number,
+    approverId: number = 1
+  ) {
+    const res = await fetch(
+      `${API}/transfers/${id}/reject`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          approverId,
+        }),
+      }
+    );
 
     return res.json();
   },
