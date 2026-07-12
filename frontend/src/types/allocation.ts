@@ -1,41 +1,37 @@
+export interface Asset {
+  id: number;
+  assetTag: string;
+  name: string;
+  status: string;
+}
+
+export interface Employee {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export interface Department {
+  id: number;
+  name: string;
+}
+
 export interface Allocation {
   id: number;
-  assetId: number;
-  employeeId: number;
+  asset: Asset;
+  employee: Employee;
+  department?: Department | null;
   allocatedAt: string;
-  expectedReturnDate: string | null;
-  returnedAt: string | null;
-
-  asset: {
-    id: number;
-    name: string;
-    assetTag: string;
-  };
-
-  employee: {
-    id: number;
-    name: string;
-  };
+  expectedReturnDate?: string | null;
+  returnedAt?: string | null;
 }
 
 export interface Transfer {
   id: number;
-  assetId: number;
-
-  asset: {
-    name: string;
-    assetTag: string;
-  };
-
-  fromEmployee: {
-    name: string;
-  };
-
-  toEmployee: {
-    name: string;
-  };
-
+  asset: Asset;
+  fromEmployee: Employee;
+  toEmployee: Employee;
   reason: string;
-
-  status: "Pending" | "Approved" | "Rejected";
+  status: string;
+  createdAt: string;
 }
