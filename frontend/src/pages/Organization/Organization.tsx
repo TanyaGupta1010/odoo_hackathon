@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../../services/http";
-import { Building2, Layers, Users, Plus, ShieldCheck, CheckCircle2, XCircle, Edit, Trash2 } from "lucide-react";
+import { Building2, Layers, Users, Plus, ShieldCheck, CheckCircle2, XCircle, Edit, Trash2, ClipboardList } from "lucide-react";
 
 interface Department {
   id: number;
@@ -29,13 +29,33 @@ interface Employee {
   department?: { id: number; name: string } | null;
 }
 
+interface AuditCycle {
+  id: number;
+  title: string;
+  departmentId?: number | null;
+  location?: string | null;
+  startDate: string;
+  endDate: string;
+  status: "Active" | "Closed";
+  createdById?: number | null;
+}
+
 const Organization = () => {
-  const [activeTab, setActiveTab] = useState<"departments" | "categories" | "employees">("departments");
+  const [activeTab, setActiveTab] = useState<"departments" | "categories" | "employees" | "audits">("departments");
   
   // Data States
   const [departments, setDepartments] = useState<Department[]>([]);
   const [categories, setCategories] = useState<AssetCategory[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [audits, setAudits] = useState<AuditCycle[]>([]);
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [auditForm, setAuditForm] = useState({
+    title: "",
+    departmentId: "",
+    location: "",
+    startDate: "",
+    endDate: ""
+  });
   
   // Loading & Error States
   const [loading, setLoading] = useState(true);
@@ -60,15 +80,17 @@ const Organization = () => {
       setLoading(true);
       setError("");
       
-      const [deptRes, catRes, empRes] = await Promise.all([
+      const [deptRes, catRes, empRes, auditRes] = await Promise.all([
         api.get("/org/departments"),
         api.get("/org/categories"),
         api.get("/org/employees"),
+        api.get("/audit")
       ]);
 
       setDepartments(deptRes.data.data);
       setCategories(catRes.data.data);
       setEmployees(empRes.data.data);
+      setAudits(auditRes.data.data);
     } catch (err: any) {
       console.error(err);
       setError("Failed to fetch organizational configuration from server.");
@@ -181,6 +203,33 @@ const Organization = () => {
     setShowEmpModal(true);
   };
 
+  const handleSaveAudit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        title: auditForm.title,
+        departmentId: auditForm.departmentId ? Number(auditForm.departmentId) : null,
+        location: auditForm.location || null,
+        startDate: auditForm.startDate,
+        endDate: auditForm.endDate
+      };
+
+      await api.post("/audit", payload);
+
+      setShowAuditModal(false);
+      setAuditForm({
+        title: "",
+        departmentId: "",
+        location: "",
+        startDate: "",
+        endDate: ""
+      });
+      fetchData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to create audit cycle.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-[400px] items-center justify-center text-sm font-semibold text-[#75808A]">
@@ -212,12 +261,14 @@ const Organization = () => {
                 setEditingCat(null);
                 setCatForm({ name: "", description: "" });
                 setShowCatModal(true);
+              } else if (activeTab === "audits") {
+                setShowAuditModal(true);
               }
             }}
             className="flex items-center justify-center gap-2 rounded-xl bg-[#1F6E5A] px-5 py-3 font-semibold text-white shadow-md transition hover:bg-[#2C8A71]"
           >
             <Plus size={18} />
-            Add {activeTab === "departments" ? "Department" : "Category"}
+            Add {activeTab === "departments" ? "Department" : activeTab === "categories" ? "Category" : "Audit Cycle"}
           </button>
         )}
       </div>
@@ -262,6 +313,17 @@ const Organization = () => {
         >
           <Users size={16} />
           Employees
+        </button>
+        <button
+          onClick={() => setActiveTab("audits")}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+            activeTab === "audits"
+              ? "bg-[#1F6E5A] text-white"
+              : "text-[#75808A] hover:bg-[#F8FAFB] hover:text-[#203030]"
+          }`}
+        >
+          <ClipboardList size={16} />
+          Audit Cycles
         </button>
       </div>
 
@@ -404,6 +466,54 @@ const Organization = () => {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === "audits" && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-[#203030]">
+              <thead className="bg-[#F8FAFB] text-xs font-bold uppercase tracking-wider text-[#75808A] border-b border-[#E7ECEF]">
+                <tr>
+                  <th className="px-6 py-4">Title</th>
+                  <th className="px-6 py-4">Department</th>
+                  <th className="px-6 py-4">Location</th>
+                  <th className="px-6 py-4">Start Date</th>
+                  <th className="px-6 py-4">End Date</th>
+                  <th className="px-6 py-4">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E7ECEF]">
+                {audits.map((audit) => (
+                  <tr key={audit.id} className="transition hover:bg-[#F8FAFB]">
+                    <td className="px-6 py-4 font-bold text-[#203030]">{audit.title}</td>
+                    <td className="px-6 py-4 text-[#75808A]">
+                      {departments.find(d => d.id === audit.departmentId)?.name || "—"}
+                    </td>
+                    <td className="px-6 py-4 text-[#75808A]">{audit.location || "—"}</td>
+                    <td className="px-6 py-4 text-[#75808A]">{new Date(audit.startDate).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 text-[#75808A]">{new Date(audit.endDate).toLocaleDateString()}</td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          audit.status === "Active"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-slate-100 text-slate-700 border-slate-200"
+                        }`}
+                      >
+                        {audit.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {audits.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="text-center py-8 text-xs text-[#75808A]">
+                      No audit cycles configured.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -621,6 +731,106 @@ const Organization = () => {
                 className="rounded-xl bg-[#1F6E5A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2C8A71]"
               >
                 Save Assignment
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* --- Create Audit Cycle Modal --- */}
+      {showAuditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <form
+            onSubmit={handleSaveAudit}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-[#E7ECEF]"
+          >
+            <h3 className="text-lg font-bold text-[#203030]">Create Audit Cycle</h3>
+
+            <div className="mt-4 flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-bold text-[#75808A]">Title</label>
+                <input
+                  type="text"
+                  required
+                  value={auditForm.title}
+                  onChange={(e) => setAuditForm({ ...auditForm, title: e.target.value })}
+                  placeholder="e.g., Q3 Asset Audit"
+                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#75808A]">Department (Optional)</label>
+                <select
+                  value={auditForm.departmentId}
+                  onChange={(e) => setAuditForm({ ...auditForm, departmentId: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
+                >
+                  <option value="">All Departments</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#75808A]">Location (Optional)</label>
+                <input
+                  type="text"
+                  value={auditForm.location}
+                  onChange={(e) => setAuditForm({ ...auditForm, location: e.target.value })}
+                  placeholder="e.g., Main Office, Warehouse"
+                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#75808A]">Start Date</label>
+                <input
+                  type="date"
+                  required
+                  value={auditForm.startDate}
+                  onChange={(e) => setAuditForm({ ...auditForm, startDate: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#75808A]">End Date</label>
+                <input
+                  type="date"
+                  required
+                  value={auditForm.endDate}
+                  onChange={(e) => setAuditForm({ ...auditForm, endDate: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-[#E7ECEF] bg-white px-4 py-2.5 text-sm text-[#203030] focus:border-[#1F6E5A]"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2 border-t border-[#E7ECEF] pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAuditModal(false);
+                  setAuditForm({
+                    title: "",
+                    departmentId: "",
+                    location: "",
+                    startDate: "",
+                    endDate: ""
+                  });
+                }}
+                className="rounded-xl border border-[#E7ECEF] px-4 py-2 text-sm font-semibold text-[#75808A] hover:bg-[#F8FAFB]"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="rounded-xl bg-[#1F6E5A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2C8A71]"
+              >
+                Create Audit Cycle
               </button>
             </div>
           </form>
