@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  MessageSquare,
   ChevronLeft,
   ChevronRight,
   ArrowRight,
   Zap,
   Plus,
+  LineChart,
+  Calendar,
+  Clock,
+  ClipboardCheck,
+  ShieldCheck,
 } from "lucide-react";
 
 import deploy1 from "../../assets/deploy1.jpg";
@@ -14,9 +18,10 @@ import deploy2 from "../../assets/deploy2.jpg";
 import Ring from "./Ring";
 import { getCurrentUser, firstName } from "../../utils/user";
 
-const stakeholders = [
-  { name: "Oliver Miller", role: "Project Director", from: "#3B5C4A", to: "#1F6E5A" },
-  { name: "Liam Garcia", role: "Maintenance Lead", from: "#4A6FA5", to: "#2B4B7E" },
+const allocation = [
+  { label: "Industrial Robotics", pct: 82 },
+  { label: "Cloud Infrastructure", pct: 64 },
+  { label: "Logistics Fleet", pct: 95 },
 ];
 
 const rings = [
@@ -70,15 +75,6 @@ const SectionHeader = ({
   </div>
 );
 
-const Avatar = ({ name, from, to }: { name: string; from: string; to: string }) => (
-  <span
-    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-    style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
-  >
-    {name.split(" ").map((w) => w[0]).join("")}
-  </span>
-);
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const user = getCurrentUser();
@@ -101,15 +97,6 @@ const Dashboard = () => {
     monthOffset === 0 ? todayDate : -1,
   );
 
-  const schedule = [
-    { title: "Robotics Maintenance", time: "10:30 AM" },
-    { title: "Electronics Inventory", time: "02:00 PM" },
-    { title: "Systems C++ Patching", time: "04:30 PM" },
-  ].map((s, i) => ({
-    ...s,
-    day: new Date(currentYear, today.getMonth(), todayDate + i).getDate(),
-  }));
-
   const keyEvents = [
     { title: "Quarterly Asset Audit", sub: "13:00 - Main Warehouse", solid: false, offset: 4 },
     { title: "Procurement Webinar", sub: "11:00 - Virtual", solid: true, offset: 7 },
@@ -122,6 +109,33 @@ const Dashboard = () => {
     };
   });
 
+  const eventChips = [
+    { title: "Quarterly Asset Audit", offset: 4 },
+    { title: "Procurement Webinar", offset: 7 },
+  ].map((e) => {
+    const d = new Date(currentYear, today.getMonth(), todayDate + e.offset);
+    return {
+      ...e,
+      day: d.getDate(),
+      label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    };
+  });
+  const eventDays = monthOffset === 0 ? new Set(eventChips.map((e) => e.day)) : new Set<number>();
+
+  const milestones = [
+    { title: "Robotics Maintenance Cycle", time: "10:30 AM", place: "Sector 4B", icon: Clock, accent: "#1F6E5A", offset: 0 },
+    { title: "Electronics Inventory Scan", time: "02:00 PM", place: "Warehouse A", icon: ClipboardCheck, accent: "#8FD0B8", offset: 1 },
+    { title: "Quarterly Compliance Audit", time: "09:00 AM", place: "HQ Conference Room", icon: ShieldCheck, accent: "#334155", offset: 4 },
+  ].map((m) => {
+    const d = new Date(currentYear, today.getMonth(), todayDate + m.offset);
+    return {
+      ...m,
+      day: d.getDate(),
+      weekday:
+        m.offset === 0 ? "TODAY" : d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase(),
+    };
+  });
+
   return (
     <div className="pb-10">
       <h1 className="text-2xl font-bold tracking-tight text-[#1A2B4A]">
@@ -131,36 +145,60 @@ const Dashboard = () => {
       <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* Left column */}
         <div className="space-y-5 lg:col-span-2">
-          {/* Stakeholders + Key Events */}
+          {/* Resource Allocation + Key Events */}
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            {/* Resource Allocation */}
             <div className={cardClass}>
-              <SectionHeader
-                title="Stakeholders"
-                action="See more"
-                onAction={() => navigate("/organization")}
-              />
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-base font-bold text-[#1A2B4A]">Resource Allocation</h3>
+                <button onClick={() => navigate("/reports")} aria-label="Analytics">
+                  <LineChart size={16} className="text-[#8A97A5] hover:text-[#1F6E5A]" />
+                </button>
+              </div>
+
               <div className="space-y-3">
-                {stakeholders.map((s) => (
-                  <div
-                    key={s.name}
-                    className="flex items-center gap-3 rounded-xl border border-[#EEF1F4] p-3"
-                  >
-                    <Avatar name={s.name} from={s.from} to={s.to} />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-[#1A2B4A]">{s.name}</p>
-                      <p className="text-xs text-[#8A97A5]">{s.role}</p>
+                {allocation.map((a) => (
+                  <div key={a.label}>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-[#475467]">{a.label}</span>
+                      <span className="font-bold text-[#1A2B4A]">{a.pct}% In Use</span>
                     </div>
-                    <MessageSquare size={18} className="text-[#1F6E5A]" />
+                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[#EEF2F5]">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${a.pct}%`,
+                          background: a.pct >= 90 ? "#C0392B" : "#1F6E5A",
+                        }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
+
+              <div className="mt-4 flex items-center border-t border-[#EAEEF2] pt-3">
+                <div className="flex-1">
+                  <p className="text-2xl font-bold text-[#1A2B4A]">1,240</p>
+                  <p className="text-[10px] font-semibold tracking-widest text-[#8A97A5]">
+                    TOTAL ASSETS
+                  </p>
+                </div>
+                <span className="h-9 w-px bg-[#EAEEF2]" />
+                <div className="flex-1 pl-4">
+                  <p className="text-2xl font-bold text-[#1F6E5A]">184</p>
+                  <p className="text-[10px] font-semibold tracking-widest text-[#8A97A5]">
+                    AVAILABLE
+                  </p>
+                </div>
+              </div>
             </div>
 
+            {/* Key Events */}
             <div className={cardClass}>
               <SectionHeader
                 title="Key Events"
                 action="See more"
-                onAction={() => navigate("/booking")}
+                onAction={() => navigate("/audit")}
               />
               <div className="space-y-3">
                 {keyEvents.map((e) => (
@@ -183,10 +221,13 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Inventory Schedule */}
+          {/* Operations Calendar */}
           <div className={cardClass}>
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-base font-bold text-[#1A2B4A]">Inventory Schedule</h3>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Calendar size={18} className="text-[#1F6E5A]" />
+                <h3 className="text-base font-bold text-[#1A2B4A]">Operations Calendar</h3>
+              </div>
               <div className="flex items-center gap-2 text-sm font-semibold text-[#475467]">
                 <span className="w-28 text-right">{monthLabel}</span>
                 <button
@@ -203,11 +244,17 @@ const Dashboard = () => {
                 >
                   <ChevronRight size={16} />
                 </button>
+                <button
+                  onClick={() => navigate("/booking")}
+                  className="ml-1 text-[#1F6E5A] hover:underline"
+                >
+                  Full Schedule
+                </button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {/* Calendar */}
+              {/* Calendar + event chips */}
               <div>
                 <div className="grid grid-cols-7 text-center text-[11px] font-semibold text-[#B4BDC6]">
                   {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
@@ -215,36 +262,70 @@ const Dashboard = () => {
                   ))}
                 </div>
                 <div className="mt-2 grid grid-cols-7 gap-y-1 text-center text-[13px]">
-                  {calendar.map((c, i) => (
-                    <div key={i} className="flex items-center justify-center">
-                      <span
-                        className={`flex h-7 w-7 items-center justify-center rounded-full ${
-                          c.today
-                            ? "bg-[#1F6E5A] font-bold text-white"
-                            : c.muted
-                              ? "text-[#C7CED4]"
-                              : "text-[#475467]"
-                        }`}
-                      >
-                        {c.day}
-                      </span>
+                  {calendar.map((c, i) => {
+                    const isEvent = !c.muted && eventDays.has(c.day);
+                    return (
+                      <div key={i} className="flex items-center justify-center">
+                        <span
+                          className={`flex h-7 w-7 items-center justify-center rounded-full ${
+                            c.today
+                              ? "bg-[#1F6E5A] font-bold text-white"
+                              : isEvent
+                                ? "border border-[#1F6E5A] font-semibold text-[#1F6E5A]"
+                                : c.muted
+                                  ? "text-[#C7CED4]"
+                                  : "text-[#475467]"
+                          }`}
+                        >
+                          {c.day}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  {eventChips.map((e, i) => (
+                    <div
+                      key={e.title}
+                      className={`flex items-center gap-2 rounded-lg px-3 py-2 ${
+                        i === 0 ? "bg-[#F2F5F8]" : "bg-[#EEF6F1]"
+                      }`}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#1F6E5A]" />
+                      <span className="text-xs font-bold text-[#1A2B4A]">{e.label}:</span>
+                      <span className="text-xs text-[#475467]">{e.title}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Event list */}
-              <div className="flex flex-col justify-center gap-4">
-                {schedule.map((s) => (
-                  <div key={s.title} className="flex items-center gap-4">
-                    <span className="w-6 text-lg font-bold text-[#1A2B4A]">{s.day}</span>
-                    <span className="h-8 w-px bg-[#E6EAEE]" />
-                    <div>
-                      <p className="text-sm font-semibold text-[#1A2B4A]">{s.title}</p>
-                      <p className="text-xs text-[#8A97A5]">{s.time}</p>
+              {/* Upcoming milestones */}
+              <div>
+                <p className="mb-3 text-[10px] font-bold tracking-[0.15em] text-[#8A97A5]">
+                  UPCOMING MILESTONES
+                </p>
+                <div className="space-y-4">
+                  {milestones.map((m) => (
+                    <div key={m.title} className="flex items-center gap-3">
+                      <span
+                        className="h-11 w-1 shrink-0 rounded-full"
+                        style={{ background: m.accent }}
+                      />
+                      <div className="w-9 shrink-0 text-center">
+                        <p className="text-lg font-bold leading-none text-[#1A2B4A]">{m.day}</p>
+                        <p className="mt-0.5 text-[9px] font-semibold text-[#8A97A5]">{m.weekday}</p>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-[#1A2B4A]">{m.title}</p>
+                        <p className="text-xs text-[#8A97A5]">
+                          {m.time} — {m.place}
+                        </p>
+                      </div>
+                      <m.icon size={16} className="shrink-0 text-[#8A97A5]" />
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
