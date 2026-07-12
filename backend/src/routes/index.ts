@@ -13,6 +13,7 @@ import resourceRoutes from "./resource.routes";
 import auditRoutes from "./audit.routes";
 import reportsRoutes from "./reports.routes";
 import notificationsRoutes from "./notifications.routes";
+import organizationRoutes from "./organization.routes";
 
 const router = Router();
 
@@ -42,5 +43,6 @@ router.use("/resources", authenticate, resourceRoutes);
 router.use("/audit", authenticate, auditRoutes);
 router.use("/reports", authenticate, reportsRoutes);
 router.use("/notifications", authenticate, notificationsRoutes);
+router.use("/org", authenticate, organizationRoutes);
 
 export default router;
