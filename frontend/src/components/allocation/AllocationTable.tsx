@@ -6,12 +6,14 @@ interface Props {
   allocations: Allocation[];
   loading: boolean;
   onReturn: (id: number) => void;
+  onViewHistory: (assetId: number) => void;
 }
 
 export default function AllocationTable({
   allocations,
   loading,
   onReturn,
+  onViewHistory,
 }: Props) {
   if (loading) {
     return (
@@ -46,9 +48,9 @@ export default function AllocationTable({
               <th className="px-6 py-4">Employee</th>
               <th className="px-6 py-4">Department</th>
               <th className="px-6 py-4">Allocated</th>
-              <th className="px-6 py-4">Return</th>
+              <th className="px-6 py-4">Return Date</th>
               <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4"></th>
+              <th className="px-6 py-4">Action</th>
             </tr>
           </thead>
 
@@ -59,7 +61,12 @@ export default function AllocationTable({
                 className="border-t hover:bg-slate-50"
               >
                 <td className="px-6 py-4">
-                  <div>
+                  <button
+                    onClick={() =>
+                      onViewHistory(allocation.asset.id)
+                    }
+                    className="text-left hover:text-[#1F6E5A]"
+                  >
                     <p className="font-medium">
                       {allocation.asset.name}
                     </p>
@@ -67,7 +74,7 @@ export default function AllocationTable({
                     <p className="text-xs text-slate-500">
                       {allocation.asset.assetTag}
                     </p>
-                  </div>
+                  </button>
                 </td>
 
                 <td className="px-6 py-4">
