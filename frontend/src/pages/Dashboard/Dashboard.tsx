@@ -1,7 +1,11 @@
 const Dashboard = () => {
   return (
     <div>
-      Dashboard
+
+      <h1 className="text-[58px] font-bold leading-none text-[#203030]">
+        Hello, Sophia!
+      </h1>
+
     </div>
   );
 };
