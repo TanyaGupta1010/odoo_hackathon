@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import AllocationHeader from "../../components/allocation/AllocationHeader";
 import AllocationStats from "../../components/allocation/AllocationStats";
 import AllocationForm from "../../components/allocation/AllocationForm";
+import AllocationSearch from "../../components/allocation/AllocationSearch";
 import AllocationTable from "../../components/allocation/AllocationTable";
 import TransferTable from "../../components/allocation/TransferTable";
 
@@ -24,13 +25,17 @@ export default function Allocation() {
   const [loadingTransfers, setLoadingTransfers] =
     useState(true);
 
+  const [search, setSearch] = useState("");
+
+  const [status, setStatus] = useState("ALL");
+
   async function loadAllocations() {
     try {
       setLoadingAllocations(true);
 
-      const data = await allocationService.getAll();
+      const res = await allocationService.getAll();
 
-      setAllocations(data.data ?? []);
+      setAllocations(res.data ?? []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -42,9 +47,9 @@ export default function Allocation() {
     try {
       setLoadingTransfers(true);
 
-      const data = await transferService.getAll();
+      const res = await transferService.getAll();
 
-      setTransfers(data.data ?? []);
+      setTransfers(res.data ?? []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -60,8 +65,7 @@ export default function Allocation() {
   async function handleReturn(id: number) {
     try {
       await allocationService.returnAsset(id);
-
-      await loadAllocations();
+      loadAllocations();
     } catch (err) {
       console.error(err);
     }
@@ -71,8 +75,8 @@ export default function Allocation() {
     try {
       await transferService.approve(id);
 
-      await loadTransfers();
-      await loadAllocations();
+      loadTransfers();
+      loadAllocations();
     } catch (err) {
       console.error(err);
     }
@@ -82,11 +86,36 @@ export default function Allocation() {
     try {
       await transferService.reject(id);
 
-      await loadTransfers();
+      loadTransfers();
     } catch (err) {
       console.error(err);
     }
   }
+
+  const filteredAllocations = useMemo(() => {
+    return allocations.filter((allocation) => {
+      const text =
+        `${allocation.asset.name} ${allocation.asset.assetTag} ${allocation.employee.name}`.toLowerCase();
+
+      const searchMatch = text.includes(
+        search.toLowerCase()
+      );
+
+      if (status === "ALL") {
+        return searchMatch;
+      }
+
+      if (status === "Allocated") {
+        return searchMatch && !allocation.returnedAt;
+      }
+
+      if (status === "Returned") {
+        return searchMatch && !!allocation.returnedAt;
+      }
+
+      return searchMatch;
+    });
+  }, [allocations, search, status]);
 
   return (
     <div className="space-y-8">
@@ -107,13 +136,22 @@ export default function Allocation() {
       />
 
       <AllocationForm
-        onSuccess={() => {
-          loadAllocations();
+        onSuccess={loadAllocations}
+      />
+
+      <AllocationSearch
+        search={search}
+        status={status}
+        onSearchChange={setSearch}
+        onStatusChange={setStatus}
+        onReset={() => {
+          setSearch("");
+          setStatus("ALL");
         }}
       />
 
       <AllocationTable
-        allocations={allocations}
+        allocations={filteredAllocations}
         loading={loadingAllocations}
         onReturn={handleReturn}
       />
