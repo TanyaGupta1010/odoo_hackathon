@@ -2,7 +2,7 @@ import axios from "axios";
 
 import { getToken } from "../utils/user";
 
-const API = "http://localhost:5001/api";
+const API = "https://odoo-hackathon-oi06.onrender.com/api";
 
 /** fetch wrapper that attaches the stored JWT and parses JSON. */
 export async function apiFetch(path: string, options: RequestInit = {}) {

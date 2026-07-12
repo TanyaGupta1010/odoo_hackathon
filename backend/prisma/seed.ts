@@ -1,9 +1,17 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
+// Shared demo password for every seeded account so they can actually log in.
+// Log in as admin@assetflow.com to get Admin access, or any other seeded
+// address (e.g. priya.shah@assetflow.com) to test the non-admin experience.
+const DEMO_PASSWORD = 'password123';
+
 async function main() {
   console.log('Seeding database with mock enterprise data...');
+
+  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
 
   // 1. Clear existing data in reverse dependency order
   await prisma.activityLog.deleteMany({});
@@ -35,7 +43,7 @@ async function main() {
     data: {
       name: 'System Admin',
       email: 'admin@assetflow.com',
-      passwordHash: '$2b$10$xyzAdminHashString',
+      passwordHash,
       role: 'Admin',
       departmentId: eng.id,
     },
@@ -45,7 +53,7 @@ async function main() {
     data: {
       name: 'Aditi Rao',
       email: 'aditi.rao@assetflow.com',
-      passwordHash: '$2b$10$xyzDeptHeadHash1',
+      passwordHash,
       role: 'Department Head',
       departmentId: eng.id,
     },
@@ -55,7 +63,7 @@ async function main() {
     data: {
       name: 'Rohan Mehta',
       email: 'rohan.mehta@assetflow.com',
-      passwordHash: '$2b$10$xyzDeptHeadHash2',
+      passwordHash,
       role: 'Department Head',
       departmentId: fac.id,
     },
@@ -65,7 +73,7 @@ async function main() {
     data: {
       name: 'Sana Iqbal',
       email: 'sana.iqbal@assetflow.com',
-      passwordHash: '$2b$10$xyzManagerHash1',
+      passwordHash,
       role: 'Asset Manager',
       departmentId: fieldOps.id,
     },
@@ -75,7 +83,7 @@ async function main() {
     data: {
       name: 'Priya Shah',
       email: 'priya.shah@assetflow.com',
-      passwordHash: '$2b$10$xyzEmployeeHash1',
+      passwordHash,
       role: 'Employee',
       departmentId: eng.id,
     },
@@ -85,7 +93,7 @@ async function main() {
     data: {
       name: 'Raj Patel',
       email: 'raj.patel@assetflow.com',
-      passwordHash: '$2b$10$xyzEmployeeHash2',
+      passwordHash,
       role: 'Employee',
       departmentId: eng.id,
     },
