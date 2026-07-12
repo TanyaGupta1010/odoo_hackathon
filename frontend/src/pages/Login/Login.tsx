@@ -5,7 +5,10 @@ import { Landmark } from "lucide-react";
 
 import city from "../../assets/city.jpg";
 import GoogleButton from "./GoogleButton";
-import { nameFromEmail, setCurrentUser } from "../../utils/user";
+import GoogleLoginButton from "./GoogleLoginButton";
+import { setCurrentUser, setToken } from "../../utils/user";
+import { authService } from "../../services/auth.service";
+import { isGoogleEnabled } from "../../config";
 
 const stats = [
   { value: "1.2B", label: "Assets Tracked" },
@@ -17,14 +20,38 @@ const avatars = ["#3B5C4A", "#4A6FA5", "#8A5A44", "#5A5A6E"];
 
 const Login = () => {
   const navigate = useNavigate();
+  const googleEnabled = isGoogleEnabled();
   const [remember, setRemember] = useState(false);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    const name = nameFromEmail(email);
-    if (name) setCurrentUser({ name });
+  const applyAuth = (res: Awaited<ReturnType<typeof authService.login>>) => {
+    if (!res.success || !res.data) {
+      setError(res.message || "Authentication failed");
+      return;
+    }
+    setToken(res.data.token);
+    setCurrentUser({ name: res.data.user.name, role: res.data.user.role });
     navigate("/dashboard");
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const res = await authService.login({ email, password });
+    setLoading(false);
+    applyAuth(res);
+  };
+
+  const handleGoogleToken = async (accessToken: string) => {
+    setError("");
+    setLoading(true);
+    const res = await authService.google(accessToken);
+    setLoading(false);
+    applyAuth(res);
   };
 
   return (
@@ -78,10 +105,18 @@ const Login = () => {
               <input
                 type="password"
                 required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="w-full rounded-lg border border-[#E1E6EA] bg-[#F7F9FA] px-3.5 py-2.5 text-sm text-[#203030] transition placeholder:text-[#9AA5AF] focus:border-[#1F6E5A] focus:bg-white focus:ring-2 focus:ring-[#1F6E5A]/15"
               />
             </div>
+
+            {error && (
+              <p className="rounded-lg bg-[#FDECEC] px-3 py-2 text-xs font-medium text-[#D64545]">
+                {error}
+              </p>
+            )}
 
             <label className="flex items-center gap-2 pt-1 text-sm text-[#6B7683]">
               <input
@@ -95,9 +130,10 @@ const Login = () => {
 
             <button
               type="submit"
-              className="w-full rounded-lg bg-[#1F6E5A] py-3 text-sm font-semibold tracking-wide text-white transition hover:bg-[#195C4B]"
+              disabled={loading}
+              className="w-full rounded-lg bg-[#1F6E5A] py-3 text-sm font-semibold tracking-wide text-white transition hover:bg-[#195C4B] disabled:opacity-60"
             >
-              SIGN IN
+              {loading ? "SIGNING IN…" : "SIGN IN"}
             </button>
           </form>
 
@@ -109,7 +145,18 @@ const Login = () => {
             <span className="h-px flex-1 bg-[#E7ECEF]" />
           </div>
 
-          <GoogleButton onClick={() => navigate("/dashboard")} />
+          {googleEnabled ? (
+            <GoogleLoginButton
+              onToken={handleGoogleToken}
+              onError={setError}
+              disabled={loading}
+            />
+          ) : (
+            <GoogleButton
+              disabled={loading}
+              onClick={() => setError("Google sign-in isn’t configured yet.")}
+            />
+          )}
         </div>
 
         <div className="mx-auto w-full max-w-md text-center text-[11px] text-[#8A97A5]">

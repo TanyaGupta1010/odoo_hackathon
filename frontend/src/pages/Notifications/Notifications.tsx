@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { Bell, AlertCircle, CheckCircle, Calendar, ArrowRightLeft } from "lucide-react";
 
-const API_BASE = "http://localhost:5000/api";
+import { api } from "../../services/http";
 
 interface ActivityLog {
   id: number;
@@ -68,7 +67,7 @@ const Notifications = () => {
       setError("");
       // Build filter query param based on activeTab selection
       const filterParam = activeTab === "All" ? "" : `?type=${activeTab}`;
-      const res = await axios.get(`${API_BASE}/notifications${filterParam}`);
+      const res = await api.get(`/notifications${filterParam}`);
       if (res.data.success) {
         setLogs(res.data.data);
       }

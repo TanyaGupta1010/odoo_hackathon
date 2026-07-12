@@ -1,5 +1,8 @@
 import { Router } from "express";
 
+import { env } from "../config/env";
+import { authenticate } from "../middleware/auth.middleware";
+import authRoutes from "./auth.routes";
 import allocationRoutes from "./allocation.routes";
 import assetRoutes from "./asset.routes";
 import employeeRoutes from "./employee.routes";
@@ -20,17 +23,24 @@ router.get("/", (_, res) => {
   });
 });
 
-router.use("/assets", assetRoutes);
-router.use("/employees", employeeRoutes);
-router.use("/allocations", allocationRoutes);
-router.use("/transfers", transferRoutes);
-router.use("/maintenance", maintenanceRoutes);
+// Public client config — the Google client ID is not a secret (it lives in the
+// browser anyway). Served here so it's configured in one place: backend/.env.
+router.get("/config", (_, res) => {
+  res.json({ success: true, data: { googleClientId: env.GOOGLE_CLIENT_ID } });
+});
 
-router.use("/bookings", bookingRoutes);
-router.use("/resources", resourceRoutes);
+router.use("/auth", authRoutes);
 
-router.use("/audit", auditRoutes);
-router.use("/reports", reportsRoutes);
-router.use("/notifications", notificationsRoutes);
+// All business-data endpoints require a valid login.
+router.use("/assets", authenticate, assetRoutes);
+router.use("/employees", authenticate, employeeRoutes);
+router.use("/allocations", authenticate, allocationRoutes);
+router.use("/transfers", authenticate, transferRoutes);
+router.use("/maintenance", authenticate, maintenanceRoutes);
+router.use("/bookings", authenticate, bookingRoutes);
+router.use("/resources", authenticate, resourceRoutes);
+router.use("/audit", authenticate, auditRoutes);
+router.use("/reports", authenticate, reportsRoutes);
+router.use("/notifications", authenticate, notificationsRoutes);
 
 export default router;
