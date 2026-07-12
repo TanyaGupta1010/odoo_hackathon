@@ -10,6 +10,7 @@ import {
   Mail,
   ArrowRight,
 } from "lucide-react";
+import { setCurrentUser } from "../../utils/user";
 
 const features = [
   {
@@ -29,10 +30,12 @@ const avatars = ["#3B5C4A", "#4A6FA5", "#8A5A44", "#5A5A6E"];
 const Signup = () => {
   const navigate = useNavigate();
   const [agreed, setAgreed] = useState(false);
+  const [fullName, setFullName] = useState("");
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!agreed) return;
+    if (fullName.trim()) setCurrentUser({ name: fullName });
     navigate("/dashboard");
   };
 
@@ -120,6 +123,8 @@ const Signup = () => {
                 <input
                   type="text"
                   required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   placeholder="E.g., Jonathan Sterling"
                   className="w-full rounded-lg border border-[#E1E6EA] bg-[#F7F9FA] py-2.5 pl-10 pr-3.5 text-sm text-[#203030] transition placeholder:text-[#9AA5AF] focus:border-[#1F6E5A] focus:bg-white focus:ring-2 focus:ring-[#1F6E5A]/15"
                 />

@@ -1,53 +1,59 @@
-import { NavLink } from "react-router-dom";
+import { LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import SidebarItem from "./SidebarItem";
+import { sidebarItems } from "../../constants/sidebar";
+import { getCurrentUser, clearCurrentUser } from "../../utils/user";
 
-const menu = [
-  { name: "Dashboard", path: "/dashboard" },
-  { name: "Organization Setup", path: "/organization" },
-  { name: "Assets", path: "/assets" },
-  { name: "Allocation & Transfer", path: "/allocation" },
-  { name: "Resource Booking", path: "/booking" },
-  { name: "Maintenance", path: "/maintenance" },
-  { name: "Audit", path: "/audit" },
-  { name: "Reports", path: "/reports" },
-  { name: "Notifications", path: "/notifications" },
-];
+const Sidebar = () => {
+  const navigate = useNavigate();
+  const user = getCurrentUser();
 
-export default function Sidebar() {
+  const handleLogout = () => {
+    clearCurrentUser();
+    navigate("/login", { replace: true });
+  };
+
   return (
-    <aside className="w-48 bg-white border-r border-[#E7ECEF] flex flex-col">
-
-      <div className="px-4 py-4 border-b border-[#E7ECEF]">
-        <h1 className="font-bold text-lg text-[#203030]">
+    <aside className="flex h-screen w-[260px] flex-col border-r border-[#E6EAEE] bg-white">
+      {/* Logo */}
+      <div className="shrink-0 px-6 pt-6 pb-3">
+        <h1 className="text-3xl font-extrabold tracking-tight text-[#1F6E5A]">
           AssetFlow
         </h1>
       </div>
 
-      <nav className="flex flex-col gap-1 p-3">
+      {/* Profile */}
+      <div className="flex shrink-0 flex-col items-center px-4 pb-4">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#DDE5E8] text-2xl font-bold text-[#5E6C74]">
+          {user.initials}
+        </div>
 
-        {menu.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.path}
-            className={({ isActive }) =>
-              `
-              px-3
-              py-2
-              text-sm
-              rounded
-              transition
-              ${
-                isActive
-                  ? "border border-[#1F6E5A] text-[#1F6E5A] bg-[#F7FCFA]"
-                  : "text-[#303030] hover:bg-gray-50"
-              }
-            `
-            }
-          >
-            {item.name}
-          </NavLink>
+        <h2 className="mt-3 w-full break-words text-center text-lg font-semibold text-[#203030]">
+          {user.name}
+        </h2>
+
+        <p className="mt-0.5 text-sm text-[#667085]">{user.role}</p>
+      </div>
+
+      {/* Menu (scrolls if it can't all fit) */}
+      <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-2">
+        {sidebarItems.map((item) => (
+          <SidebarItem key={item.title} {...item} />
         ))}
-
       </nav>
+
+      {/* Logout */}
+      <div className="shrink-0 border-t border-[#E6EAEE] p-3">
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-[#475467] transition hover:bg-[#F5F7F9]"
+        >
+          <LogOut size={20} />
+          Logout
+        </button>
+      </div>
     </aside>
   );
-}
+};
+
+export default Sidebar;

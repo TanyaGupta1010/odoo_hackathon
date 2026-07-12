@@ -1,6 +1,9 @@
 import { Bell, Search, Settings } from "lucide-react";
+import { getCurrentUser } from "../../utils/user";
 
 const Header = () => {
+  const user = getCurrentUser();
+
   return (
     <header className="flex h-24 items-center justify-between border-b border-[#E6EAEE] bg-white px-10">
 
@@ -32,7 +35,7 @@ const Header = () => {
         />
 
         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1F6E5A] font-semibold text-white">
-          ST
+          {user.initials}
         </div>
 
       </div>

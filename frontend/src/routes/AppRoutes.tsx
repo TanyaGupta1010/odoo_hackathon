@@ -3,10 +3,10 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Login from "../pages/Login";
 import Signup from "../pages/Signup";
 import Dashboard from "../pages/Dashboard";
+import Organization from "../pages/Organization";
 import Assets from "../pages/Assets";
 import Allocation from "../pages/Allocation";
 import Booking from "../pages/Booking";
-import Organization from "../pages/Organization";
 import Maintenance from "../pages/Maintenance";
 import Audit from "../pages/Audit";
 import Reports from "../pages/Reports";
@@ -21,6 +21,7 @@ const AppRoutes = () => {
         <Route path="/" element={<Navigate to="/login" replace />} />
 
         <Route path="/login" element={<Login />} />
+
         <Route path="/signup" element={<Signup />} />
 
         <Route element={<MainLayout />}>
