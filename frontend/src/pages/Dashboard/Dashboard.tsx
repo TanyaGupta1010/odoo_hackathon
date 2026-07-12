@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   MessageSquare,
   ChevronLeft,
@@ -45,11 +47,22 @@ function buildCalendar(year: number, month: number, todayDate: number) {
 
 const cardClass = "rounded-2xl border border-[#EAEEF2] bg-white p-4";
 
-const SectionHeader = ({ title, action }: { title: string; action?: string }) => (
+const SectionHeader = ({
+  title,
+  action,
+  onAction,
+}: {
+  title: string;
+  action?: string;
+  onAction?: () => void;
+}) => (
   <div className="mb-3 flex items-center justify-between">
     <h3 className="text-base font-bold text-[#1A2B4A]">{title}</h3>
     {action && (
-      <button className="flex items-center gap-1 text-xs font-semibold text-[#1F6E5A]">
+      <button
+        onClick={onAction}
+        className="flex items-center gap-1 text-xs font-semibold text-[#1F6E5A] hover:underline"
+      >
         {action}
         <ChevronRight size={13} />
       </button>
@@ -67,27 +80,41 @@ const Avatar = ({ name, from, to }: { name: string; from: string; to: string }) 
 );
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const user = getCurrentUser();
   const greeting = firstName(user.name).toUpperCase();
 
   const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
+  const currentYear = today.getFullYear();
   const todayDate = today.getDate();
-  const monthLabel = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const calendar = buildCalendar(year, month, todayDate);
+
+  // Calendar month navigation (0 = current month).
+  const [monthOffset, setMonthOffset] = useState(0);
+  const viewDate = new Date(currentYear, today.getMonth() + monthOffset, 1);
+  const monthLabel = viewDate.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+  const calendar = buildCalendar(
+    viewDate.getFullYear(),
+    viewDate.getMonth(),
+    monthOffset === 0 ? todayDate : -1,
+  );
 
   const schedule = [
     { title: "Robotics Maintenance", time: "10:30 AM" },
     { title: "Electronics Inventory", time: "02:00 PM" },
     { title: "Systems C++ Patching", time: "04:30 PM" },
-  ].map((s, i) => ({ ...s, day: new Date(year, month, todayDate + i).getDate() }));
+  ].map((s, i) => ({
+    ...s,
+    day: new Date(currentYear, today.getMonth(), todayDate + i).getDate(),
+  }));
 
   const keyEvents = [
     { title: "Quarterly Asset Audit", sub: "13:00 - Main Warehouse", solid: false, offset: 4 },
     { title: "Procurement Webinar", sub: "11:00 - Virtual", solid: true, offset: 7 },
   ].map((e) => {
-    const d = new Date(year, month, todayDate + e.offset);
+    const d = new Date(currentYear, today.getMonth(), todayDate + e.offset);
     return {
       ...e,
       month: d.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
@@ -107,7 +134,11 @@ const Dashboard = () => {
           {/* Stakeholders + Key Events */}
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className={cardClass}>
-              <SectionHeader title="Stakeholders" action="See more" />
+              <SectionHeader
+                title="Stakeholders"
+                action="See more"
+                onAction={() => navigate("/organization")}
+              />
               <div className="space-y-3">
                 {stakeholders.map((s) => (
                   <div
@@ -126,7 +157,11 @@ const Dashboard = () => {
             </div>
 
             <div className={cardClass}>
-              <SectionHeader title="Key Events" action="See more" />
+              <SectionHeader
+                title="Key Events"
+                action="See more"
+                onAction={() => navigate("/booking")}
+              />
               <div className="space-y-3">
                 {keyEvents.map((e) => (
                   <div key={e.title} className="flex items-center gap-3">
@@ -153,9 +188,21 @@ const Dashboard = () => {
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-base font-bold text-[#1A2B4A]">Inventory Schedule</h3>
               <div className="flex items-center gap-2 text-sm font-semibold text-[#475467]">
-                {monthLabel}
-                <ChevronLeft size={16} className="text-[#8A97A5]" />
-                <ChevronRight size={16} className="text-[#8A97A5]" />
+                <span className="w-28 text-right">{monthLabel}</span>
+                <button
+                  onClick={() => setMonthOffset((o) => o - 1)}
+                  aria-label="Previous month"
+                  className="rounded p-0.5 text-[#8A97A5] hover:bg-[#F2F5F8] hover:text-[#1F6E5A]"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  onClick={() => setMonthOffset((o) => o + 1)}
+                  aria-label="Next month"
+                  className="rounded p-0.5 text-[#8A97A5] hover:bg-[#F2F5F8] hover:text-[#1F6E5A]"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
             </div>
 
@@ -207,7 +254,11 @@ const Dashboard = () => {
             <SectionHeader title="Active Deployments" />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {deployments.map((d) => (
-                <div key={d.id} className="relative h-36 overflow-hidden rounded-xl">
+                <button
+                  key={d.id}
+                  onClick={() => navigate("/assets")}
+                  className="relative h-36 overflow-hidden rounded-xl text-left"
+                >
                   <img src={d.img} alt="" className="absolute inset-0 h-full w-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                   <div className="absolute bottom-0 p-4 text-white">
@@ -216,7 +267,7 @@ const Dashboard = () => {
                       DEPLOYMENT ID: {d.id}
                     </p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -232,7 +283,10 @@ const Dashboard = () => {
                 <Ring key={r.label} value={r.value} color={r.color} label={r.label} />
               ))}
             </div>
-            <button className="mt-6 flex items-center justify-center gap-2 text-sm font-semibold text-[#4ADE9A]">
+            <button
+              onClick={() => navigate("/reports")}
+              className="mt-6 flex items-center justify-center gap-2 text-sm font-semibold text-[#4ADE9A] hover:underline"
+            >
               View Detailed Analytics
               <ArrowRight size={16} />
             </button>
@@ -247,25 +301,35 @@ const Dashboard = () => {
               </span>
             </div>
             <div className="space-y-4">
-              <div className="border-l-2 border-[#E5484D] pl-3">
+              <button
+                onClick={() => navigate("/maintenance")}
+                className="block w-full border-l-2 border-[#E5484D] pl-3 text-left"
+              >
                 <p className="text-sm font-semibold text-[#1A2B4A]">Maintenance Overdue</p>
                 <p className="text-xs text-[#8A97A5]">Sensor #901 in Server Room B</p>
-              </div>
-              <div className="border-l-2 border-[#1F6E5A] pl-3">
+              </button>
+              <button
+                onClick={() => navigate("/assets")}
+                className="block w-full border-l-2 border-[#1F6E5A] pl-3 text-left"
+              >
                 <p className="text-sm font-semibold text-[#1A2B4A]">New Inventory Arrived</p>
                 <p className="text-xs text-[#8A97A5]">15x Robotic Arm Assemblies</p>
-              </div>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       <footer className="mt-8 text-center text-xs text-[#A2ACB6]">
-        © {year} AssetFlow Enterprise ERP. Powered by Precision &amp; Growth Systems.
+        © {currentYear} AssetFlow Enterprise ERP. Powered by Precision &amp; Growth Systems.
       </footer>
 
       {/* Floating action button */}
-      <button className="fixed bottom-8 right-8 flex h-14 w-14 items-center justify-center rounded-full bg-[#1F6E5A] text-white shadow-lg transition hover:bg-[#195C4B]">
+      <button
+        onClick={() => navigate("/assets")}
+        aria-label="Add asset"
+        className="fixed bottom-8 right-8 flex h-14 w-14 items-center justify-center rounded-full bg-[#1F6E5A] text-white shadow-lg transition hover:bg-[#195C4B]"
+      >
         <Plus size={24} />
       </button>
     </div>
