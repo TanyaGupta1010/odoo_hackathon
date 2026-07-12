@@ -20,6 +20,7 @@ export const sidebarItems = [
     title: "Organization Setup",
     icon: Building2,
     path: "/organization",
+    adminOnly: true,
   },
   {
     title: "Assets",
