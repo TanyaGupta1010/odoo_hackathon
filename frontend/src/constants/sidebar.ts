@@ -51,9 +51,4 @@ export const sidebarItems = [
     icon: BarChart3,
     path: "/reports",
   },
-  {
-    title: "Notifications",
-    icon: Bell,
-    path: "/notifications",
-  },
 ];
