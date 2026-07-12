@@ -51,3 +51,5 @@ export const setCurrentUser = (user: { name: string; role?: string }) => {
     JSON.stringify({ name, role: user.role?.trim() || DEFAULT_USER.role }),
   );
 };
+
+export const clearCurrentUser = () => localStorage.removeItem(STORAGE_KEY);
