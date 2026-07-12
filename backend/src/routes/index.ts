@@ -5,6 +5,7 @@ import assetRoutes from "./asset.routes";
 import employeeRoutes from "./employee.routes";
 import transferRoutes from "./transfer.routes";
 import maintenanceRoutes from "./maintenance.routes";
+import auditRoutes from "./audit.routes";
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use("/employees", employeeRoutes);
 router.use("/allocations", allocationRoutes);
 router.use("/transfers", transferRoutes);
 router.use("/maintenance", maintenanceRoutes);
+router.use("/audit", auditRoutes);
 
 export default router;

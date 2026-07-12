@@ -368,9 +368,10 @@ async function main() {
   });
 
   // 9.5 Create Audit Cycle & Items (Screen 8)
+  // Active Q3 Audit Cycle
   const auditCycle = await prisma.auditCycle.create({
     data: {
-      title: 'Q3 audit: Engineering dept - 1-15 jul',
+      title: 'Q3 audit: Engineering dept.',
       departmentId: eng.id,
       startDate: new Date('2026-07-01'),
       endDate: new Date('2026-07-15'),
@@ -404,6 +405,49 @@ async function main() {
       assetId: monitor.id,
       status: 'Damaged',
       notes: 'Screen cracked at Desk E15',
+    },
+  });
+
+  // Open Q2 Audit Cycle
+  const activeCycleQ2 = await prisma.auditCycle.create({
+    data: {
+      title: 'Q2 audit: Facilities dept.',
+      departmentId: fac.id,
+      startDate: new Date('2026-04-01'),
+      endDate: new Date('2026-04-10'),
+      status: 'Active',
+      createdById: admin.id,
+    },
+  });
+
+  await prisma.auditItem.create({
+    data: {
+      auditCycleId: activeCycleQ2.id,
+      assetId: chairRepair.id,
+      status: 'Verified',
+      notes: 'Verified in HR Office',
+      verifiedAt: new Date('2026-04-05T11:00:00Z'),
+    },
+  });
+
+  // Historical Closed Q1 Audit Cycle
+  const closedCycleQ1 = await prisma.auditCycle.create({
+    data: {
+      title: 'Q1 audit: General HQ',
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-01-10'),
+      status: 'Closed',
+      createdById: admin.id,
+    },
+  });
+
+  await prisma.auditItem.create({
+    data: {
+      auditCycleId: closedCycleQ1.id,
+      assetId: acUnit.id,
+      status: 'Verified',
+      notes: 'Unit running properly',
+      verifiedAt: new Date('2026-01-04T12:00:00Z'),
     },
   });
 
