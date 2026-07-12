@@ -24,15 +24,46 @@ export const allocationService = {
   },
 
   async getHistory(assetId: number) {
-    const res = await fetch(`${API}/allocations/history/${assetId}`);
+    const res = await fetch(
+      `${API}/allocations/history/${assetId}`
+    );
+
     return res.json();
   },
 
-  async returnAsset(id: number) {
-    const res = await fetch(`${API}/allocations/return/${id}`, {
-      method: "PUT",
-    });
+  async returnAsset(
+    id: number,
+    condition = "Good",
+    notes = ""
+  ) {
+    const res = await fetch(
+      `${API}/allocations/${id}/return`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          condition,
+          notes,
+        }),
+      }
+    );
 
     return res.json();
+  },
+
+  async getAssets() {
+    const res = await fetch(`${API}/assets`);
+    const data = await res.json();
+
+    return data.data ?? [];
+  },
+
+  async getEmployees() {
+    const res = await fetch(`${API}/employees`);
+    const data = await res.json();
+
+    return data.data ?? [];
   },
 };
